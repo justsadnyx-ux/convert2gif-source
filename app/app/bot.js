@@ -4,15 +4,19 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { imageToGif, imgInfo, downloadAttachment, isSupportedImage } from './media.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOSTED_BY = 'https://convert2gif.pages.dev/';
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 
-const CONFIG_PATH = path.join(__dirname, 'config.json');
-const CONTROL_PATH = path.join(__dirname, 'control.json');
+// Config/control live OUTSIDE the app folder (in %APPDATA%\Convert2GIF) so they
+// survive app updates. The bootstrapper sets CONVERT2GIF_USERDATA.
+const DATA_DIR = process.env.CONVERT2GIF_USERDATA || path.join(__dirname, 'data');
+const CONFIG_PATH = process.env.CONVERT2GIF_CONFIG || path.join(DATA_DIR, 'config.json');
+const CONTROL_PATH = process.env.CONVERT2GIF_CONTROL || path.join(DATA_DIR, 'control.json');
 
 function loadConfig() {
   if (!fs.existsSync(CONFIG_PATH)) {

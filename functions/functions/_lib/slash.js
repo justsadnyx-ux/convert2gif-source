@@ -227,7 +227,6 @@ export async function handleInteractionRequest(context) {
               { name: '🔒 Membership required', value: `The bot works anywhere, but you must be a member of the **Convert2GIF** server to use commands — join: ${INVITE_URL}`, inline: false },
               { name: '🛡️ Moderation', value: 'Banned words, reactions, scam/spam links, invite links, NSFW images, and spam are auto-moderated. ⚠️ marks violations; repeat offenders get timed out.', inline: false },
               { name: '\u200b', value: `*Rate limit: ${GIF_LIMIT} GIF conversions per 10 minutes per user.*`, inline: false },
-              { name: '🏠 Hosted by', value: `[convert2gif.pages.dev](https://convert2gif.pages.dev/)`, inline: false },
             ]
           )],
         },

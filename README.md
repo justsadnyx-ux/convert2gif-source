@@ -1,106 +1,67 @@
 # Convert2GIF
 
-A Discord bot + website that turns images, videos, and GIFs into animated GIFs.
+A Discord bot that turns PNG/JPG/GIF images into **real static GIF files**, now open source and self-hostable.
 
-## What's here
+**Hosted by [convert2gif.pages.dev](https://convert2gif.pages.dev/)**
 
-- `public/` — the website (homepage, web converter, terms, privacy) served on `convert2gif.pages.dev`
-- `functions/api/convert.js` — rate-limited conversion tracker for the web converter
-- `functions/api/stats.js` — live stats endpoint (GIF count, servers, online status)
-- `functions/api/poll.js` — the Discord bot. Processing happens here via the REST API.
-- `scripts/setup-profile.js` — generates an avatar/banner and sets the bot's username, bio, and app description
-- `wrangler.toml` — Cloudflare Pages config (+ KV namespace)
+## Download
 
-## Commands
+Everything is published on the [Releases](https://github.com/justsadnyx-ux/convert2gif-source/releases) page:
 
-| Command | Description |
-| ------- | ----------- |
-| `.gif` | Reply to a message with an image, or attach one. The bot converts it to an animated GIF and replies. |
-| `.help` | Lists commands. |
-| `.uptime` | Bot uptime. |
-| `.stats` | GIF conversion count + server count. |
+| Asset | What it is |
+| ----- | ---------- |
+| `Convert2GIF-Bootstrap.exe` | Windows bootstrapper with a browser-based control panel. Installs Node.js + the bot, manages it, self-heals, self-updates. **Start here.** |
+| `convert2gif-app-*.zip` | The `/gif`-only bot package the bootstrapper installs automatically. |
+| `Convert2GIF-Mobile-BETA.apk` | Android app to control the same bootstrapper from your phone (same Wi-Fi). |
 
-Rate limits: 5 commands per 15s per user, 30 per 15s per guild. The web converter allows 10 conversions per 10 minutes per IP.
+## Quick start
 
-## Architecture
+1. Download `Convert2GIF-Bootstrap.exe` from the latest release.
+2. Run it — a control panel opens in your browser.
+3. Enter your bot token + application id once (Settings).
+4. Press start. That's it.
 
-Cloudflare Pages **Functions** can't stream the Discord Gateway, and they don't have a native cron trigger, so the bot runs as a **poll loop**: an external cron service hits `POST /api/poll` (every 15–30s) with the poll secret. The poll endpoint reads recent messages from guilds the bot is in, processes commands, and replies with GIFs directly from the edge.
+Your config is stored in `%APPDATA%\Convert2GIF\` — **you enter your token once, even across updates.**
 
-Conversion is done server-side in pure JS:
-- PNG / JPEG decoded with `pngjs` / `jpeg-js`
-- Encoded to GIF with `gifenc`
-- Replies attach the GIF via Discord's REST API (multipart)
+## Features
 
-Videos and WebP are not converted by the bot (it must stay fast) — the web converter handles those fully in-browser using the GIF.js encoder.
+- Real browser UI — no terminal required.
+- Config survives updates (stored outside the app folder).
+- Self-healing: auto reinstalls missing packages or re-pulls a clean app if the bot fails to start.
+- Self-updating: downloads new bootstrapper + app releases; config untouched.
+- Presence control: online / away / DND / invisible.
+- Mobile BETA: control from your phone over LAN, or install the panel as an app (PWA). Standalone Android APK published.
+- Branding "Hosted by convert2gif.pages.dev" shown in bot replies and activity.
 
-## Setup
+## Repository layout
 
-1. Install deps:
+| Path | Purpose |
+| ---- | ------- |
+| `bootstrap/` | Bootstrapper source (`launcher.js` + bundled browser UI `ui.js`). Build: `bun build --compile --minify bootstrap/launcher.js --outfile Convert2GIF-Bootstrap.exe` |
+| `app/` | The `/gif`-only bot installed by the bootstrapper (`bot.js`, `media.js`). |
+| `selfhost/` | Same `/gif`-only bot as a standalone Node script (env-var config). |
+| `android/` | Android app (BETA) source + `build-apk.ps1` (no Gradle required). |
+| `public/` | The website (home, terms, privacy, discord redirect). |
+| `functions/` | Cloudflare Pages functions: interaction server, `/source` redirect, converter/stats/poll APIs. |
+| `functions/_lib/media.js` | Pure image → GIF conversion core (works on Workers and plain Node). |
+| `poller/` | Gateway worker (messages, reactions, moderation, logging). |
+| `scripts/` | Command registration + profile generators. |
 
-```bash
-npm install
-```
+## Homepage
 
-2. Create a KV namespace and put its ID in `wrangler.toml`:
+The site homepage redirects here so GitHub's **Releases + README** are the single source of truth.
+`https://convert2gif.pages.dev/source?code=<code>` also redirects here.
 
-```bash
-npx wrangler kv namespace create CONVERT_DATA
-```
+## Hosting the full bot (Cloudflare Pages)
 
-3. Set the secrets (project-level):
-
-```bash
-npx wrangler pages secret put BOT_TOKEN --project-name convert2gif
-npx wrangler pages secret put POLL_SECRET --project-name convert2gif
-npx wrangler pages secret put DISCORD_CLIENT_ID --project-name convert2gif
-```
-
-> API token + account ID via `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`, or `wrangler login`.
-
-4. Deploy:
-
-```bash
-npx wrangler pages deploy public --project-name convert2gif
-```
-
-5. Set the custom subdomain from the Cloudflare dashboard (Pages → convert2gif → Custom domains → `convert2gif.pages.dev`, already available by default as `<project>.pages.dev`).
-
-6. Point an external cron (cron-job.org, EasyCron, etc.) at:
+Replace every `<YOUR_...>` placeholder (IDs were scrubbed from the public tree),
+set secrets (`BOT_TOKEN`, `POLL_SECRET`, `DISCORD_CLIENT_ID`), configure the
+`CONVERT_DATA` KV namespace id in `wrangler.toml`, create the AutoMod rules and
+roles, then:
 
 ```
-POST https://convert2gif.pages.dev/api/poll
-Headers: x-poll-secret: <your POLL_SECRET>
+wrangler pages deploy --project-name convert2gif
+wrangler deploy -c poller/wrangler.toml   # gateway worker + cron
 ```
 
-Run every 15–30 seconds for near-real-time replies.
-
-## Bot profile (icon, banner, bio)
-
-```bash
-$env:BOT_TOKEN = "your_discord_bot_token_here"
-npm run setup-profile
-```
-
-This generates `assets/avatar.png` and `assets/banner.png`, then sets the avatar, banner, username (`Convert2GIF`), bio ("About Me"), and application description.
-
-> If the bio/About Me field doesn't stick via the API, set it in the Discord Developer Portal under **App Settings → General → About Me**. The application description is also editable there.
-
-## Discord app setup
-
-- Client ID / Application ID: `<YOUR_APPLICATION_ID>`
-- Add the bot to servers with the invite link on the homepage (permissions: Read Messages, Send Messages, Read Message History, Attach Files).
-- Invite URL: `https://discord.com/oauth2/authorize?client_id=<YOUR_APPLICATION_ID>&scope=bot&permissions=35840`
-
-## Env vars used
-
-| Secret | Purpose |
-| ------ | ------- |
-| `BOT_TOKEN` | Discord bot token |
-| `POLL_SECRET` | Required by `/api/poll` (`x-poll-secret` header) |
-| `DISCORD_CLIENT_ID` | Bot application ID |
-
-## Local dev
-
-```bash
-npx wrangler pages dev public --kv CONVERT_DATA=<namespace-id>
-```
+Validation / moderation / logging all ship in `functions/_lib/slash.js` and `poller/src/bot.js`.

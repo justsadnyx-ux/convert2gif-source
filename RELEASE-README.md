@@ -2,80 +2,55 @@
 
 Everything behind **convert2gif.pages.dev** plus a fully local, no-cloud stack:
 
-- a **terminal bootstrapper** (`.exe`) that installs Node, sets the bot up,
-  runs it, changes its presence, and **updates itself**;
-- a **`/gif`-only self-hosted bot** you can run on any machine;
-- the Cloudflare Pages website + gateway poller (for the original hosted bot).
+- a **bootstrapper** (`.exe`) with a real browser-based control panel;
+- a **`/gif`-only self-hosted bot**;
+- an **Android app (BETA)** to control it from your phone;
+- the Cloudflare Pages website + Gateway poller for the original hosted bot.
 
 **Hosted by convert2gif.pages.dev** — please keep the branding when forking.
-
----
 
 ## Releases (versioned properly)
 
 | Tag | Contents |
 | --- | -------- |
-| `v1.1.0` | `Convert2GIF-Bootstrap.exe` (self-updating terminal bootstrapper) + `convert2gif-app-v1.1.0.zip` (the bot it installs) |
-| `v1.0.0` | `Convert2GIF-Terminal.exe` (previous simple launcher) |
+| `v1.2.0` | `Convert2GIF-Bootstrap.exe` (GUI bootstrapper), `convert2gif-app-v1.2.0.zip` (bot package), `Convert2GIF-Mobile-BETA.apk` (Android BETA) |
+| `v1.1.0` | `Convert2GIF-Bootstrap.exe` + app package (previous bootstrapper) |
+| `v1.0.0` | `Convert2GIF-Terminal.exe` (original terminal launcher) |
 
-Both `.exe`s are Windows binaries compiled with Bun — no Node or Cloudflare is
-required to run the bootstrapper itself.
+## What's in each release version
 
----
+### v1.2.0 (current)
+- **New GUI bootstrapper**: control panel opens in the browser (dark UI, presence control, live log, set-up/launch animations and audio cues). No terminal.
+- **Config survives updates**: settings live in `%APPDATA%\Convert2GIF\`, outside the app folder (which is stored per-version under `%APPDATA%\Convert2GIF\app\v<version>`).
+- **Self-healing**: if the bot crashes on startup (missing packages, broken files) it reinstalls dependencies or re-pulls a clean app automatically.
+- **Self-updating**: fetches new bootstrapper and app releases; your config is untouched.
+- **Mobile BETA**: control the bootstrapper from a phone on the same Wi-Fi (panel is a PWA), plus a standalone Android APK.
+- Full source for bootstrapper (`bootstrap/`), bot (`app/`), Android app (`android/`).
 
-## What's in the repo
+### v1.1.0
+- Terminal bootstrapper with presence control and self-update; app config stored beside the exe.
 
-| Path | What it is |
-| ---- | ---------- |
-| `public/` | The website (home, terms, privacy, discord redirect — everything else removed) |
-| `functions/` | Cloudflare Pages Functions: Discord interaction server, web converter API, stats, poll, **`/source` redirect** (long URL → repo) |
-| `functions/_lib/media.js` | Pure image → GIF conversion core (PNG/JPG/GIF decode + GIF encode + NSFW rasterize) — **Node-compatible** |
-| `functions/_lib/slash.js` | All 16 slash commands, verification, moderation, logging |
-| `functions/api/poll.js` | Rate-limited web-converter endpoint |
-| `poller/` | The Discord Gateway worker (messages, reactions, moderation, logging) |
-| `bootstrap/launcher.js` | Source of the **terminal bootstrapper** (`bun build --compile --minify bootstrap/launcher.js`) |
-| `app/` | The `/gif`-only bot package the bootstrapper installs (`app/bot.js`, `app/media.js`, `app/package.json`) |
-| `selfhost/index.js` | The same `/gif`-only bot standalone (plain Node >= 22) |
-| `scripts/` | Command registration + avatar/banner/profile generators |
+### v1.0.0
+- Original terminal launcher for the `/gif`-only bot.
 
----
+## How the bootstrapper works
 
-## Local, no-cloud setup (`/gif`-only bot)
+1. On first run it provisions: installs/checks Node.js, downloads the app zip from the latest release, extracts it to `%APPDATA%\Convert2GIF\app\v<version>\`, runs `npm install`. 
+2. You enter a bot token and application id in the panel once — stored as `%APPDATA%\Convert2GIF\config.json`.
+3. Start/stop the bot, switch presence, watch the live log, or update.
+4. On a newer release the app is installed into a new versioned folder and the pointer is switched — **no config re-entry**.
 
-1. Download `Convert2GIF-Bootstrap.exe` from the latest release.
-2. Put it in a folder, run it.
-3. It installs **Node.js** if missing, downloads + extracts the app package,
-   runs `npm install`, and lets you:
-   - **Start / Stop** the bot
-   - **Change presence**: online / away / DND / invisible
-   - **Edit configuration** (it asks for your bot token + application id)
-   - **Check for updates** (self-updates the bootstrapper and app from GitHub)
-4. The bot registers and serves only `/gif` — attach an image or pass `url:`.
+## APK (BETA) build
 
-CLI alternative:
+`android/build-apk.ps1` builds the signed APK with the Android SDK directly (no Gradle):
 
-```bash
-npm install
-node app/bot.js        # requires app/config.json (see bootstrap config wizard)
-# or: node selfhost/index.js   (reads BOT_TOKEN / DISCORD_CLIENT_ID env vars)
+```
+powershell -ExecutionPolicy Bypass -File android/build-apk.ps1
 ```
 
----
+Requires build-tools 34.0.0, platform android-34, and JDK 17 — outputs `android/Convert2GIF-Mobile-BETA.apk`.
 
-## Hosting the full bot (Cloudflare Pages)
+## The site
 
-Unchanged from before — edit the `<YOUR_...>` placeholders (IDs are scrubbed
-from the public tree), set secrets (`BOT_TOKEN`, `POLL_SECRET`,
-`DISCORD_CLIENT_ID`), then `wrangler pages deploy`. Set the `CONVERT_DATA` KV
-namespace id in `wrangler.toml`, create the AutoMod rules + roles, and point an
-external cron at `POST /api/poll`.
-
-See `README.md` for the step-by-step guide.
-
----
-
-## The `/source` redirect
-
-`https://convert2gif.pages.dev/source?code=<long-random-code>` → 302 →
-this repository. The code is stored in the `CONVERT_DATA` KV namespace under
-`sourcecode`.
+`https://convert2gif.pages.dev/` redirects here (this page + Releases are the source of truth).
+Terms / privacy / discord remain reachable, and `/source?code=<code>` redirects to the repository.
