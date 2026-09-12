@@ -1,80 +1,81 @@
 # Convert2GIF — Open Source Release
 
-Everything that runs **convert2gif.pages.dev** and its Discord bot, plus a tiny
-`/gif`-only self-hosted edition and a terminal launcher (`.exe`).
+Everything behind **convert2gif.pages.dev** plus a fully local, no-cloud stack:
 
-**Hosted by convert2gif.pages.dev** — if you fork or self-host a copy of this
-project, please keep the "Hosted by convert2gif.pages.dev" branding intact.
+- a **terminal bootstrapper** (`.exe`) that installs Node, sets the bot up,
+  runs it, changes its presence, and **updates itself**;
+- a **`/gif`-only self-hosted bot** you can run on any machine;
+- the Cloudflare Pages website + gateway poller (for the original hosted bot).
+
+**Hosted by convert2gif.pages.dev** — please keep the branding when forking.
 
 ---
 
-## What's in the box
+## Releases (versioned properly)
+
+| Tag | Contents |
+| --- | -------- |
+| `v1.1.0` | `Convert2GIF-Bootstrap.exe` (self-updating terminal bootstrapper) + `convert2gif-app-v1.1.0.zip` (the bot it installs) |
+| `v1.0.0` | `Convert2GIF-Terminal.exe` (previous simple launcher) |
+
+Both `.exe`s are Windows binaries compiled with Bun — no Node or Cloudflare is
+required to run the bootstrapper itself.
+
+---
+
+## What's in the repo
 
 | Path | What it is |
 | ---- | ---------- |
-| `public/` | The website (home, web converter, terms, privacy) |
-| `functions/` | Cloudflare Pages Functions — Discord interaction server, web converter API, stats, poll forwarding, **`/source` redirect** |
+| `public/` | The website (home, terms, privacy, discord redirect — everything else removed) |
+| `functions/` | Cloudflare Pages Functions: Discord interaction server, web converter API, stats, poll, **`/source` redirect** (long URL → repo) |
+| `functions/_lib/media.js` | Pure image → GIF conversion core (PNG/JPG/GIF decode + GIF encode + NSFW rasterize) — **Node-compatible** |
 | `functions/_lib/slash.js` | All 16 slash commands, verification, moderation, logging |
 | `functions/api/poll.js` | Rate-limited web-converter endpoint |
-| `functions/_lib/media.js` | Pure image → GIF conversion core (PNG/JPG/GIF decode, GIF encode, NSFW rasterize) — **Node-compatible** |
-| `poller/` | The Discord Gateway worker (poll-based; sees/edits/deletes messages, reactions, logs, moderation) |
-| `selfhost/index.js` | **`/gif`-only self-hosted bot** — plain Node.js, no Workers needed |
+| `poller/` | The Discord Gateway worker (messages, reactions, moderation, logging) |
+| `bootstrap/launcher.js` | Source of the **terminal bootstrapper** (`bun build --compile --minify bootstrap/launcher.js`) |
+| `app/` | The `/gif`-only bot package the bootstrapper installs (`app/bot.js`, `app/media.js`, `app/package.json`) |
+| `selfhost/index.js` | The same `/gif`-only bot standalone (plain Node >= 22) |
 | `scripts/` | Command registration + avatar/banner/profile generators |
-| `wrangler.toml` | Pages config + KV + Workers AI binding |
 
 ---
 
-## Option A — Run the full bot (Cloudflare Pages)
+## Local, no-cloud setup (`/gif`-only bot)
 
-Requires a Cloudflare account, a Discord application, and ~15 minutes.
+1. Download `Convert2GIF-Bootstrap.exe` from the latest release.
+2. Put it in a folder, run it.
+3. It installs **Node.js** if missing, downloads + extracts the app package,
+   runs `npm install`, and lets you:
+   - **Start / Stop** the bot
+   - **Change presence**: online / away / DND / invisible
+   - **Edit configuration** (it asks for your bot token + application id)
+   - **Check for updates** (self-updates the bootstrapper and app from GitHub)
+4. The bot registers and serves only `/gif` — attach an image or pass `url:`.
 
-1. **Edit the placeholders.** Search the repo for `<YOUR_...>` and fill in:
-
-   | Placeholder | Fill with |
-   | ----------- | --------- |
-   | `<YOUR_APPLICATION_ID>` | Your Discord application / client ID |
-   | `<YOUR_SERVER_ID>` | Your Discord server (guild) ID |
-   | `<YOUR_INFO_CHANNEL_ID>` | Announcements channel |
-   | `<YOUR_MODLOG_CHANNEL_ID>` | Moderation / abuse-log channel |
-   | `<YOUR_DISCORD_USER_ID>` | Your own user ID (owner-only commands) |
-   | `<YOUR_VERIFIED_ROLE_ID>` | The "Verified" role for access control |
-   | `<YOUR_UNVERIFIED_ROLE_ID>` | The "Unverified" role |
-   | `<YOUR_INVITE_URL>` / `<YOUR_INVITE_CODE>` | Your server invite |
-   | `<YOUR_KV_NAMESPACE_ID>` | KV namespace created via `wrangler kv namespace create CONVERT_DATA` |
-
-2. Follow the full guide in [`README.md`](README.md) — secrets, deploy, cron poll.
-
----
-
-## Option B — Self-host the `/gif`-only bot (plain Node)
-
-No Cloudflare, no Workers. Just a normal Node >= 22 process that registers and
-serves the single `/gif` slash command.
+CLI alternative:
 
 ```bash
 npm install
-$env:BOT_TOKEN = "<your_discord_bot_token_here>"
-$env:DISCORD_CLIENT_ID = "<your_application_id>"
-node selfhost/index.js
+node app/bot.js        # requires app/config.json (see bootstrap config wizard)
+# or: node selfhost/index.js   (reads BOT_TOKEN / DISCORD_CLIENT_ID env vars)
 ```
 
-- Registers `/gif` (image attachment or `url:`) and converts to a static GIF.
-- Shows **"Hosted by convert2gif.pages.dev"** in the reply footer and activity.
-- No server features, no moderation, no membership gating.
+---
+
+## Hosting the full bot (Cloudflare Pages)
+
+Unchanged from before — edit the `<YOUR_...>` placeholders (IDs are scrubbed
+from the public tree), set secrets (`BOT_TOKEN`, `POLL_SECRET`,
+`DISCORD_CLIENT_ID`), then `wrangler pages deploy`. Set the `CONVERT_DATA` KV
+namespace id in `wrangler.toml`, create the AutoMod rules + roles, and point an
+external cron at `POST /api/poll`.
+
+See `README.md` for the step-by-step guide.
 
 ---
 
-## Terminal launcher (`.exe`)
+## The `/source` redirect
 
-A terminal-themed launcher that asks for your bot token + client ID and boots
-the `/gif`-only bot with the "Hosted by" branding. Source lives in
-`app/` at the project root of the release package.
-
----
-
-## Nice things to know
-
-- The download page `/source?code=<long-random-code>` redirects here.
-- The GIF encoder only produces **static** GIFs from still images (by design).
-- Everything is dependency-light: `gifenc`, `jpeg-js`, `upng-js`, `omggif`.
-- The poller worker needs the `CONVERT_DATA` KV binding and `POLL_SECRET` to talk to `/api/poll`.
+`https://convert2gif.pages.dev/source?code=<long-random-code>` → 302 →
+this repository. The code is stored in the `CONVERT_DATA` KV namespace under
+`sourcecode`.

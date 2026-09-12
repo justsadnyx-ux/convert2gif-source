@@ -9,7 +9,7 @@
 // Registers the `/gif` command and serves it — nothing else.
 // "Hosted by" branding is included. No server features, no moderation, no slash-server.
 
-import { imageToGif, imgInfo, downloadAttachment, isSupportedImage } from '../functions/_lib/media.js';
+import { imageToGif, imgInfo, downloadAttachment, isSupportedImage, imageExt } from '../functions/_lib/media.js';
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || process.env.CLIENT_ID || '';

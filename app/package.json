@@ -1,0 +1,16 @@
+{
+  "name": "convert2gif-app",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Convert2GIF /gif-only self-hosted bot (managed by the bootstrapper)",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "gifenc": "^1.0.3",
+    "jpeg-js": "^0.4.4",
+    "omggif": "^1.0.10",
+    "upng-js": "^2.1.0"
+  }
+}

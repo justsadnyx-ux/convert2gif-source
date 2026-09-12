@@ -3,234 +3,75 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Convert2GIF â€” Image &amp; Video to GIF in Discord and on the Web</title>
-  <meta name="description" content="Convert images, videos, and GIFs into animated GIFs â€” with the Convert2GIF Discord bot or the free in-browser converter. No signup, no watermark." />
+  <title>Convert2GIF — Self-hosted GIF bot</title>
+  <meta name="description" content="Convert2GIF is now open source and self-hosted. Download the source, the terminal bootstrapper, or the /gif-only bot — hosted by you." />
   <link rel="icon" href="/favicon.svg" />
-  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0 }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d0f14; color: #e6e9f0; min-height: 100vh;
+      display: flex; flex-direction: column;
+      background-image:
+        radial-gradient(900px 480px at 80% -10%, rgba(45,212,191,0.08), transparent 60%),
+        radial-gradient(700px 380px at 0% 100%, rgba(251,146,60,0.06), transparent 55%);
+    }
+    .wrap { max-width: 640px; width: 100%; margin: 0 auto; padding: 56px 24px 32px; text-align: center; flex: 1 }
+    .logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; letter-spacing: 0.2px; margin-bottom: 34px }
+    h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 800; letter-spacing: -1px; margin-bottom: 14px;
+      background: linear-gradient(110deg, #2dd4bf, #fb923c); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent }
+    .sub { color: #aab4c6; font-size: 16px; line-height: 1.7; max-width: 520px; margin: 0 auto 30px }
+    code { background: #171b24; border: 1px solid #262d3d; border-radius: 6px; padding: 2px 7px; font-size: 13px; color: #9fe8d8 }
+    .card { background: #0f131b; border: 1px solid #1f2634; border-radius: 14px; padding: 8px 22px; margin: 14px 0; text-align: left }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 13px 0; border-bottom: 1px solid #171d29 }
+    .row:last-child { border-bottom: none }
+    .row .n { font-weight: 700; font-size: 15px }
+    .row .d { color: #7f8aa0; font-size: 13px; margin-top: 3px }
+    .btn { display: inline-block; background: #1f2634; color: #e6e9f0; text-decoration: none; font-weight: 700; font-size: 13.5px;
+      border: 1px solid #2a3345; border-radius: 9px; padding: 9px 16px; white-space: nowrap; transition: border-color .15s, background .15s }
+    .btn:hover { border-color: #2dd4bf; background: #17202c }
+    .btn.accent { background: #2dd4bf; border-color: #2dd4bf; color: #06221d }
+    .btn.accent:hover { background: #5eead4 }
+    .links { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px }
+    .links a { color: #7f8aa0; text-decoration: none; font-size: 14px; font-weight: 600 }
+    .links a:hover { color: #2dd4bf }
+    .foot { color: #5c6874; font-size: 12.5px; margin-top: 34px }
+  </style>
 </head>
 <body>
-  <nav class="nav">
-    <div class="container nav-inner">
-      <a class="logo" href="/">
-        <span class="logo-ic">
-          <svg viewBox="0 0 100 100" width="34" height="34" aria-hidden="true">
-            <defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#0f172a"/></linearGradient></defs>
-            <rect width="100" height="100" rx="22" fill="url(#lg)"/>
-            <rect x="24" y="34" width="52" height="44" rx="8" fill="#0b0d12"/>
-            <path d="M40 46l20 10-20 10z" fill="#2dd4bf"/>
-          </svg>
-        </span>
-        <span class="logo-text">Convert2GIF</span>
-      </a>
-      <div class="nav-links">
-        <a class="nav-link active" href="/">Home</a>
-        <a class="nav-link" href="/converter">Converter</a>
-        <a class="nav-link" href="/bot">Bot</a>
-        <a class="nav-link" href="/commands">Commands</a>
-        <a class="nav-link" href="/faq">FAQ</a>
-        <a class="nav-link" href="/stats">Stats</a>
-        <a class="btn btn-sm nav-cta" href="#" id="inviteBtn">Add to Discord</a>
+  <div class="wrap">
+    <div class="logo">
+      <svg viewBox="0 0 100 100" width="34" height="34" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#14b8a6"/><rect x="24" y="34" width="52" height="44" rx="8" fill="#0b0d12"/><path d="M40 46l20 10-20 10z" fill="#2dd4bf"/></svg>
+      <span>Convert2GIF</span>
+    </div>
+    <h1>Own your GIF bot</h1>
+    <p class="sub">
+      Convert2GIF is now <strong>open source</strong>. Grab the source, spin up the
+      <code>/gif</code>-only bot with the terminal bootstrapper, or fork the whole
+      Workers stack — everything runs on your machine.
+    </p>
+
+    <div class="card">
+      <div class="row">
+        <div><div class="n">Source &amp; releases</div><div class="d">Full code on GitHub, versioned releases</div></div>
+        <a class="btn accent" href="/source">Get the source</a>
+      </div>
+      <div class="row">
+        <div><div class="n">Windows bootstrapper (.exe)</div><div class="d">Installs Node, deps, manages the bot — with updates</div></div>
+        <a class="btn" href="https://github.com/justsadnyx-ux/convert2gif-source/releases">Download .exe</a>
+      </div>
+      <div class="row">
+        <div><div class="n">Join the server</div><div class="d">Discord community &amp; support</div></div>
+        <a class="btn" href="/discord">Discord</a>
       </div>
     </div>
-  </nav>
 
-  <header class="hero">
-    <div class="container">
-      <div class="hero-badge"><span class="dot"></span> Free &middot; Fast &middot; No watermark</div>
-      <h1>Turn anything into a <span class="hl">GIF</span><br />in seconds</h1>
-      <p class="hero-sub">
-        Convert images, clips, and memes into smooth animated GIFs â€” right in your Discord server
-        or directly in your browser.
-      </p>
-      <div class="hero-actions">
-        <a class="btn btn-lg" href="/converter">Open Converter</a>
-        <a class="btn btn-ghost btn-lg" href="#" id="inviteBtn2">Add Convert2GIF to Discord</a>
-      </div>
+    <div class="links">
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/discord">Discord</a>
     </div>
-  </header>
-
-  <main>
-    <section class="section tint" id="try">
-      <div class="container">
-        <div class="section-head reveal" style="margin-bottom: 36px;">
-          <span class="eyebrow">No upload needed</span>
-          <h2>Try it right now</h2>
-          <p>Pick a sample and watch it come alive â€” generated instantly in your browser.</p>
-        </div>
-        <div class="demo-stage">
-          <div class="demo-preview">
-            <img id="demoImg" alt="GIF preview" />
-          </div>
-          <div class="demo-info">
-            <div class="field">
-              <span>Mode</span>
-              <div class="pill-group" id="demoMode" role="radiogroup" aria-label="Mode">
-                <button type="button" class="pill on" data-mode="static" role="radio" aria-checked="true">Static GIF (image)</button>
-                <button type="button" class="pill" data-mode="animated" role="radio" aria-checked="false">Animated GIF (video)</button>
-              </div>
-            </div>
-            <div class="field" id="demoSampleField">
-              <span>Sample</span>
-              <div class="pill-group" id="demoSamples" role="radiogroup" aria-label="Sample">
-                <button type="button" class="pill on" data-sample="waves" role="radio" aria-checked="true">Waves</button>
-                <button type="button" class="pill" data-sample="pulse" role="radio" aria-checked="false">Pulse</button>
-                <button type="button" class="pill" data-sample="blob" role="radio" aria-checked="false">Blob</button>
-              </div>
-            </div>
-            <p id="demoCaption" class="dim"></p>
-            <a class="btn" id="demoDownload" href="#" download="convert2gif.gif">â¬‡ï¸ Download GIF</a>
-            <a class="btn btn-ghost" href="/converter">Open the Converter â†’</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <div class="section-head reveal">
-          <span class="eyebrow">Features</span>
-          <h2>Everything you need to make the perfect GIF</h2>
-          <p>No installs, no uploads to a server, no watermarks. Just clean conversion.</p>
-        </div>
-        <div class="features">
-          <div class="card feature reveal">
-            <div class="feature-ic">ðŸŽžï¸</div>
-            <h3>Image &amp; video support</h3>
-            <p>PNG, JPG, WEBP, MP4, MOV, AVI, and existing GIFs. Whatever you throw at it.</p>
-          </div>
-          <div class="card feature reveal">
-            <div class="feature-ic">ðŸ› ï¸</div>
-            <h3>Full control</h3>
-            <p>Tune frame rate, output width, and looping. Get the exact GIF you want.</p>
-          </div>
-          <div class="card feature reveal">
-            <div class="feature-ic">âš¡</div>
-            <h3>In-browser conversion</h3>
-            <p>The web converter runs 100% client-side. Your files never leave your device.</p>
-          </div>
-          <div class="card feature reveal">
-            <div class="feature-ic">ðŸ¤–</div>
-            <h3>Discord native</h3>
-            <p>Slash commands and the classic <code>.gif</code> reply â€” works in any server.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" style="padding-top: 0;">
-      <div class="container">
-        <div class="panel panel-border">
-          <h2>Open the converter, drop a file,<br />get a GIF.</h2>
-          <p>Three steps. No account. No waiting for uploads.</p>
-          <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-            <a class="btn btn-lg" href="/converter">Try the Converter</a>
-            <a class="btn btn-outline-accent btn-lg" href="#" id="inviteBtn3">Invite the Bot</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="stats-section" class="section" style="padding-top: 0;">
-      <div class="container">
-        <div class="section-head reveal">
-          <span class="eyebrow">Live</span>
-          <h2>Convert2GIF by the numbers</h2>
-        </div>
-        <div class="stat-grid" id="homeStats">
-          <div class="card stat-card reveal">
-            <div class="stat-num" id="statGifs">â€¦</div>
-            <div class="stat-label">GIFs converted</div>
-          </div>
-          <div class="card stat-card reveal">
-            <div class="stat-num" id="statServers">â€¦</div>
-            <div class="stat-label">Servers using the bot</div>
-          </div>
-          <div class="card stat-card reveal">
-            <div class="stat-num" id="statStatus">â€¦</div>
-            <div class="stat-label">Bot status</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" style="padding-top: 0;">
-      <div class="container">
-        <div class="section-head reveal">
-          <span class="eyebrow">FAQ</span>
-          <h2>Common questions</h2>
-        </div>
-        <div class="faq">
-          <details class="faq-item">
-            <summary>Where do my files go?</summary>
-            <p>The web converter runs entirely in your browser â€” images and videos are processed locally and never uploaded. The Discord bot processes attachments only long enough to reply with the GIF, then discards them.</p>
-          </details>
-          <details class="faq-item">
-            <summary>Do I need to pay or sign up?</summary>
-            <p>No. Both the web converter and the Discord bot are free. There's no account, no watermark, and no conversion limits beyond a short anti-abuse rate limit.</p>
-          </details>
-          <details class="faq-item">
-            <summary>What formats are supported?</summary>
-            <p>Images: PNG, JPG, WEBP. Video: MP4, MOV, AVI. Existing GIFs are also accepted and re-encoded.</p>
-          </details>
-          <details class="faq-item">
-            <summary>Is there a file size limit?</summary>
-            <p>The web converter accepts files up to 25 MB. For the Discord bot, use an attachment that Discord allows (usually 10 MB for free users, 25 MB with boosted servers).</p>
-          </details>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <a class="logo" href="/">
-            <svg viewBox="0 0 100 100" width="28" height="28" aria-hidden="true">
-              <rect width="100" height="100" rx="22" fill="#14b8a6"/>
-              <rect x="24" y="34" width="52" height="44" rx="8" fill="#0b0d12"/>
-              <path d="M40 46l20 10-20 10z" fill="#2dd4bf"/>
-            </svg>
-            <span class="logo-text">Convert2GIF</span>
-          </a>
-          <p>The quick way to GIF your memes â€” in Discord and on the web.</p>
-        </div>
-        <div>
-          <h4>Product</h4>
-          <ul>
-            <li><a href="/converter">Web Converter</a></li>
-            <li><a href="/bot">Discord Bot</a></li>
-            <li><a href="/stats">Live Stats</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4>Help</h4>
-          <ul>
-            <li><a href="/commands">Commands</a></li>
-            <li><a href="/faq">FAQ</a></li>
-            <li><a href="/terms">Terms of Service</a></li>
-            <li><a href="/privacy">Privacy Policy</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4>Bot</h4>
-          <ul>
-            <li><a href="/bot#commands">Commands</a></li>
-            <li><a href="/bot#invite">Invite</a></li>
-            <li><a href="#" id="inviteBtn4">Add to Discord</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <p>&copy; <span id="year">2026</span> Convert2GIF. All rights reserved.</p>
-        <p>Not affiliated with Discord Inc.</p>
-      </div>
-    </div>
-  </footer>
-
-  <script src="/js/gifgen.js"></script>
-  <script src="/js/demo.js"></script>
-  <script src="/js/main.js"></script>
+    <p class="foot">Hosted by convert2gif.pages.dev · Not affiliated with Discord Inc.</p>
+  </div>
 </body>
 </html>
