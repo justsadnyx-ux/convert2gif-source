@@ -1,0 +1,46 @@
+name = "convert2gif-poller"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "CONVERT_DATA"
+id = "<YOUR_KV_NAMESPACE_ID>"
+
+[vars]
+MAIN_GUILD_ID = "<YOUR_SERVER_ID>"
+INFO_CHANNEL_ID = "<YOUR_INFO_CHANNEL_ID>"
+ABUSE_CHANNEL_ID = "<YOUR_MODLOG_CHANNEL_ID>"
+OWNER_IDS = "<YOUR_DISCORD_USER_ID>"
+BAD_REACTIONS = "😡,🤬,🖕,💢,🗯️,☠️,💀,👿"
+BAD_WORDS = "nigga,nigger,nig,retard,retarded,faggot,fag,tranny,trannies,kys,kill yourself,n3gger,pedo,pedophile,csam,loli,shota,child porn,nsfw"
+
+[triggers]
+crons = ["* * * * *"]
+
+[durable_objects]
+bindings = [{ name = "GATEWAY", class_name = "GatewayBotV5" }]
+
+[ai]
+binding = "AI"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GatewayBot"]
+
+[[migrations]]
+tag = "v2"
+renamed_classes = [{ from = "GatewayBot", to = "GatewayBotV2" }]
+
+[[migrations]]
+tag = "v3"
+renamed_classes = [{ from = "GatewayBotV2", to = "GatewayBotV3" }]
+
+[[migrations]]
+tag = "v4"
+renamed_classes = [{ from = "GatewayBotV3", to = "GatewayBotV4" }]
+
+[[migrations]]
+tag = "v5"
+renamed_classes = [{ from = "GatewayBotV4", to = "GatewayBotV5" }]
+

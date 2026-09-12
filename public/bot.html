@@ -1,0 +1,187 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discord Bot â€” Convert2GIF</title>
+  <meta name="description" content="The Convert2GIF Discord bot. Use .gif and /gif to turn images into real static GIF files — invite-only to the Convert2GIF server." />
+  <link rel="icon" href="/favicon.svg" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="logo" href="/">
+        <span class="logo-ic">
+          <svg viewBox="0 0 100 100" width="34" height="34" aria-hidden="true">
+            <defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#0f172a"/></linearGradient></defs>
+            <rect width="100" height="100" rx="22" fill="url(#lg)"/>
+            <rect x="24" y="34" width="52" height="44" rx="8" fill="#0b0d12"/>
+            <path d="M40 46l20 10-20 10z" fill="#2dd4bf"/>
+          </svg>
+        </span>
+        <span class="logo-text">Convert2GIF</span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="/">Home</a>
+        <a class="nav-link" href="/converter">Converter</a>
+        <a class="nav-link active" href="/bot">Bot</a>
+        <a class="nav-link" href="/commands">Commands</a>
+        <a class="nav-link" href="/faq">FAQ</a>
+        <a class="nav-link" href="/stats">Stats</a>
+        <a class="btn btn-sm nav-cta" href="#" id="inviteBtn">Add to Discord</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a href="/">Home</a> / Bot</div>
+      <h1>The <span class="hl" style="background:linear-gradient(100deg,#2dd4bf,#fb923c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Discord Bot</span></h1>
+      <p>Slash commands and the classic reply commands â€” in any server, any channel.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="section" style="padding-top: 40px;">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Commands</span>
+          <h2>Everything the bot can do</h2>
+        </div>
+        <div class="cmd-grid" id="commands">
+          <div class="card cmd-card reveal">
+            <span class="cmd-name">/gif</span>
+            <p class="cmd-desc">Turn an image into a real static GIF file right in the channel. Optional <code class="mono">url:</code> option. Invite-only to the Convert2GIF server.</p>
+          </div>
+          <div class="card cmd-card reveal">
+            <span class="cmd-name">/imginfo</span>
+            <p class="cmd-desc">Show an image's type, dimensions, and size.</p>
+          </div>
+          <div class="card cmd-card reveal">
+            <span class="cmd-name">/avatar <span class="dim">@user</span></span>
+            <p class="cmd-desc">Show your avatar â€” or someone else's.</p>
+          </div>
+          <div class="card cmd-card reveal">
+            <span class="cmd-name">/ping</span>
+            <p class="cmd-desc">Check bot latency.</p>
+          </div>
+          <div class="card cmd-card reveal">
+            <span class="cmd-name">/help</span>
+            <p class="cmd-desc">Lists every command and what it does.</p>
+          </div>
+          <div class="card cmd-card reveal">
+            <span class="cmd-name">/uptime</span>
+            <p class="cmd-desc">Shows how long the bot has been online.</p>
+          </div>
+          <div class="card cmd-card reveal">
+            <span class="cmd-name">/stats</span>
+            <p class="cmd-desc">Live conversion count, servers, and uptime status.</p>
+          </div>
+          <div class="card cmd-card reveal">
+            <span class="cmd-name">/invite</span>
+            <p class="cmd-desc">Get the bot's invite link.</p>
+          </div>
+          <div class="card cmd-card reveal">
+            <span class="cmd-name">.gif <span class="dim">[url]</span></span>
+            <p class="cmd-desc">The classic prefix command â€” reply to any message with an image using <code>.gif</code>, or pass a URL: <code>.gif https://â€¦</code>. Images become a clean static GIF file.</p>
+          </div>
+          <div class="card cmd-card reveal">
+            <span class="cmd-name">.imginfo<span class="dim"> Â· </span>.help<span class="dim"> Â· </span>.ping<span class="dim"> Â· </span>.uptime<span class="dim"> Â· </span>.stats<span class="dim"> Â· </span>.avatar<span class="dim"> Â· </span>.invite</span>
+            <p class="cmd-desc">Prefix equivalents of the slash commands, if you prefer the old school way.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="invite" class="section" style="padding-top: 0;">
+      <div class="container">
+        <div class="panel panel-border">
+          <h2>Invite Convert2GIF to your server</h2>
+          <p>It only needs the minimal permissions to read messages and send replies. Setup takes seconds.</p>
+          <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+            <a class="btn btn-lg" href="#" id="inviteBtn2">Invite the Bot</a>
+            <a class="btn btn-ghost btn-lg" href="/converter">Try the Web Converter</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top: 0;">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Privacy</span>
+          <h2>Your content stays yours</h2>
+        </div>
+        <div class="features">
+          <div class="card feature reveal">
+            <div class="feature-ic">ðŸ•µï¸</div>
+            <h3>Attachments aren't stored</h3>
+            <p>Files are processed just long enough to produce the GIF reply, then discarded.</p>
+          </div>
+          <div class="card feature reveal">
+            <div class="feature-ic">ðŸ“ˆ</div>
+            <h3>Aggregate stats only</h3>
+            <p>Only totals are tracked â€” conversion count and server count. No per-user data exposed.</p>
+          </div>
+          <div class="card feature reveal">
+            <div class="feature-ic">ðŸ”’</div>
+            <h3>Minimal permissions</h3>
+            <p>Read Messages, Send Messages, and basic content hooks. Nothing more.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="logo" href="/">
+            <svg viewBox="0 0 100 100" width="28" height="28" aria-hidden="true">
+              <rect width="100" height="100" rx="22" fill="#14b8a6"/>
+              <rect x="24" y="34" width="52" height="44" rx="8" fill="#0b0d12"/>
+              <path d="M40 46l20 10-20 10z" fill="#2dd4bf"/>
+            </svg>
+            <span class="logo-text">Convert2GIF</span>
+          </a>
+          <p>The quick way to GIF your memes â€” in Discord and on the web.</p>
+        </div>
+        <div>
+          <h4>Product</h4>
+          <ul>
+            <li><a href="/converter">Web Converter</a></li>
+            <li><a href="/bot">Discord Bot</a></li>
+            <li><a href="/stats">Live Stats</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Help</h4>
+          <ul>
+            <li><a href="/commands">Commands</a></li>
+            <li><a href="/faq">FAQ</a></li>
+            <li><a href="/terms">Terms of Service</a></li>
+            <li><a href="/privacy">Privacy Policy</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Bot</h4>
+          <ul>
+            <li><a href="/bot#commands">Commands</a></li>
+            <li><a href="/bot#invite">Invite</a></li>
+            <li><a href="#" id="inviteBtn4">Add to Discord</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; <span id="year">2026</span> Convert2GIF. All rights reserved.</p>
+        <p>Not affiliated with Discord Inc.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web Converter — Convert2GIF</title>
+  <meta name="description" content="Free in-browser GIF converter. Drop an image or video and download an animated GIF. No uploads, no signup." />
+  <link rel="icon" href="/favicon.svg" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="logo" href="/">
+        <span class="logo-ic">
+          <svg viewBox="0 0 100 100" width="34" height="34" aria-hidden="true">
+            <defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#0f172a"/></linearGradient></defs>
+            <rect width="100" height="100" rx="22" fill="url(#lg)"/>
+            <rect x="24" y="34" width="52" height="44" rx="8" fill="#0b0d12"/>
+            <path d="M40 46l20 10-20 10z" fill="#2dd4bf"/>
+          </svg>
+        </span>
+        <span class="logo-text">Convert2GIF</span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="/">Home</a>
+        <a class="nav-link active" href="/converter">Converter</a>
+        <a class="nav-link" href="/bot">Bot</a>
+        <a class="nav-link" href="/commands">Commands</a>
+        <a class="nav-link" href="/faq">FAQ</a>
+        <a class="nav-link" href="/stats">Stats</a>
+        <a class="btn btn-sm nav-cta" href="#" id="inviteBtn">Add to Discord</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a href="/">Home</a> / Converter</div>
+      <h1>Web <span class="hl" style="background:linear-gradient(100deg,#2dd4bf,#fb923c);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Converter</span></h1>
+      <p>Drop an image or video, tweak the settings, and download your GIF. Everything runs in your browser.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="section" style="padding-top: 32px;">
+      <div class="container">
+        <div class="converter-shell">
+          <div class="converter-card">
+            <div class="dropzone" id="dropzone">
+              <input type="file" id="fileInput" accept="image/*,video/*,.gif" hidden />
+              <div class="drop-inner" id="dropInner">
+                <span class="drop-ic">⬆️</span>
+                <div class="drop-title">Drop files here or browse</div>
+                <div class="drop-sub">PNG, JPG, WEBP → real GIF files &middot; MP4, MOV, AVI → animated GIFs &middot; up to 25 MB</div>
+                <span class="drop-action">📁 Choose a file</span>
+              </div>
+            </div>
+
+            <div class="file-chip hidden" id="fileChip">
+              <span class="chip-ic">📎</span>
+              <span class="chip-name"></span>
+              <span class="chip-size"></span>
+            </div>
+
+            <div class="converter-stage hidden" id="stage">
+              <div class="workspace">
+                <div class="preview-panel">
+                  <div class="preview-hint" id="previewHint">No media loaded yet</div>
+                  <div class="preview-wrap hidden" id="previewWrap">
+                    <video id="videoPreview" hidden controls muted playsinline></video>
+                    <img id="imgPreview" alt="preview" hidden />
+                    <canvas id="convCanvas" hidden></canvas>
+                  </div>
+                </div>
+                <div class="settings-panel">
+                  <div class="group-title">Output</div>
+                  <div class="row">
+                    <label class="field">
+                      <span>Frames per second <em class="dim">(video)</em></span>
+                      <input type="number" id="fps" value="10" min="1" max="30" />
+                    </label>
+                    <label class="field">
+                      <span>Max width (px)</span>
+                      <input type="number" id="maxWidth" value="480" min="64" max="1200" />
+                    </label>
+                  </div>
+                  <div class="note-box">
+                    <strong>Images → static GIF files.</strong> Your picture becomes a real `.gif` — no animation, just a file that accepts GIFs. Videos → animated GIF.
+                  </div>
+                  <div class="switch-row">
+                    <div>
+                      <label>Loop forever</label>
+                      <div class="hint">Off = play once and stop</div>
+                    </div>
+                    <div class="switch on" id="foreverSwitch" role="switch" aria-checked="true" tabindex="0"></div>
+                  </div>
+
+                  <div class="actions">
+                    <button class="btn" id="convertBtn">Convert</button>
+                    <button class="btn btn-ghost" id="resetBtn">Reset</button>
+                  </div>
+                  <div class="rate-status" id="rateStatus"></div>
+
+                  <div class="result hidden" id="resultWrap">
+                    <img id="resultImg" alt="converted gif" />
+                    <div class="result-actions">
+                      <a class="btn" id="downloadBtn" download="output.gif">⬇️ Download GIF</a>
+                      <span class="result-meta" id="resultMeta"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rate-note">
+              <strong>Rate limit:</strong> <span id="rateLimitText">checking…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top: 24px;">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">How it works</span>
+          <h2>Three steps to a GIF</h2>
+        </div>
+        <div class="steps">
+          <div class="card step reveal">
+            <h3>Drop a file</h3>
+            <p>An image, a short video clip, or even an existing GIF. Max 25 MB.</p>
+          </div>
+          <div class="card step reveal">
+            <h3>Tune it</h3>
+            <p>Pick frame rate, output width, and whether it loops forever.</p>
+          </div>
+          <div class="card step reveal">
+            <h3>Download</h3>
+            <p>Images become a real static `.gif`; videos become an animated GIF. All generated locally.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="logo" href="/">
+            <svg viewBox="0 0 100 100" width="28" height="28" aria-hidden="true">
+              <rect width="100" height="100" rx="22" fill="#14b8a6"/>
+              <rect x="24" y="34" width="52" height="44" rx="8" fill="#0b0d12"/>
+              <path d="M40 46l20 10-20 10z" fill="#2dd4bf"/>
+            </svg>
+            <span class="logo-text">Convert2GIF</span>
+          </a>
+          <p>The quick way to GIF your memes — in Discord and on the web.</p>
+        </div>
+        <div>
+          <h4>Product</h4>
+          <ul>
+            <li><a href="/converter">Web Converter</a></li>
+            <li><a href="/bot">Discord Bot</a></li>
+            <li><a href="/stats">Live Stats</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Help</h4>
+          <ul>
+            <li><a href="/commands">Commands</a></li>
+            <li><a href="/faq">FAQ</a></li>
+            <li><a href="/terms">Terms of Service</a></li>
+            <li><a href="/privacy">Privacy Policy</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Bot</h4>
+          <ul>
+            <li><a href="/bot#commands">Commands</a></li>
+            <li><a href="/bot#invite">Invite</a></li>
+            <li><a href="#" id="inviteBtn4">Add to Discord</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; <span id="year">2026</span> Convert2GIF. All rights reserved.</p>
+        <p>Not affiliated with Discord Inc.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/gifgen.js"></script>
+  <script src="/js/convert.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>
