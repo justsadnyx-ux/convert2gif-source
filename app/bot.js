@@ -1,4 +1,4 @@
-﻿// Convert2GIF — open-source Discord bot (plain Node.js >= 22).
+﻿// Convert2GIF — open-source Discord bot (single-file Windows terminal exe or plain Node.js >= 22).
 // Commands: /gif (images -> real static GIF files), /help.
 // Reads config.json; control.json can change presence or stop the bot (re-read
 // every 4s). Hosted-by branding included.
@@ -10,11 +10,12 @@ import { imageToGif, imgInfo, downloadAttachment, isSupportedImage } from './med
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOSTED_BY = 'https://convert2gif.pages.dev/';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.0.0';
 
 // Config/control live OUTSIDE this folder so they survive redeploys.
-// Point CONVERT2GIF_USERDATA at wherever config.json lives (defaults to ./data).
-const DATA_DIR = process.env.CONVERT2GIF_USERDATA || path.join(__dirname, 'data');
+// Default: ./data next to the exe / working directory. Override with
+// CONVERT2GIF_USERDATA.
+const DATA_DIR = process.env.CONVERT2GIF_USERDATA || path.join(process.cwd(), 'data');
 const CONFIG_PATH = process.env.CONVERT2GIF_CONFIG || path.join(DATA_DIR, 'config.json');
 const CONTROL_PATH = process.env.CONVERT2GIF_CONTROL || path.join(DATA_DIR, 'control.json');
 

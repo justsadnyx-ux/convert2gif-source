@@ -11,6 +11,22 @@ An **open-source** Discord bot that turns PNG/JPG/GIF images into **real static 
 - Pure-JS conversion core (`gifenc`, `jpeg-js`, `omggif`, `upng-js`).
 - Self-contained: config lives next to you (env-pointed folder), presence and stop controls are JSON files.
 
+## Get it
+
+Prefer a single file? Grab **Convert2GIF.exe** from the
+[Releases](https://github.com/justsadnyx-ux/convert2gif-source/releases) page —
+it's the whole bot compiled into one Windows terminal (console) app. Just put
+it in a folder, create `data\config.json`, and double-click it.
+
+```json
+{
+  "token": "your_discord_bot_token",
+  "clientId": "your_application_id"
+}
+```
+
+Commands show the bot's log in the terminal; close the window (or Ctrl+C) to stop.
+
 ## Commands
 
 | Command | Description |
@@ -18,7 +34,7 @@ An **open-source** Discord bot that turns PNG/JPG/GIF images into **real static 
 | `/gif` | Convert an attached image or `url:` to a real static GIF file |
 | `/help` | List commands |
 
-## Run it
+## Run from source
 
 ```bash
 npm install
@@ -28,13 +44,6 @@ node bot.js
 
 The bot reads `config.json` from the folder pointed at by `CONVERT2GIF_USERDATA`
 (defaults to `./data`):
-
-```json
-{
-  "token": "your_discord_bot_token",
-  "clientId": "your_application_id"
-}
-```
 
 Create the application and token in the [Discord Developer Portal](https://discord.com/developers/applications), then add the bot to a server (permissions: Read Messages, Send Messages, Read Message History, Attach Files). The bot registers its slash commands automatically on boot.
 

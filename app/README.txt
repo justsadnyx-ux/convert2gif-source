@@ -1,12 +1,16 @@
-Convert2GIF - open-source Discord bot (v1.3.0)
+Convert2GIF - open-source Discord bot (v1.0.0)
 ===============================================
 
 A Discord bot that converts PNG/JPG/GIF images into REAL static GIF files.
 Pure Node.js >= 22, no Discord library, no build step.
 
-Run
-  npm install
-  npm start        (or: node bot.js)
+Two ways to run
+  - Terminal .exe: grab Convert2GIF.exe from the Releases page - the whole
+    bot compiled into one Windows console app (logs into the terminal).
+    Make a folder, put the exe there, create data\config.json, double-click.
+  - From source:
+      npm install
+      npm start        (or: node bot.js)
 
 Config
   Bot token + client id come from config.json, which lives OUTSIDE this
@@ -15,6 +19,12 @@ Config
     CONVERT2GIF_USERDATA=/path/to/data   (defaults to ./data)
 
   config.json:  { "token": "...", "clientId": "..." }
+  Example layout for the terminal exe:
+
+    MyBot\
+      Convert2GIF.exe
+      data\
+        config.json   <-- the above JSON
 
   control.json (optional, re-read every 4s):
   { "presence": "online" }   (online | idle | dnd | invisible)
