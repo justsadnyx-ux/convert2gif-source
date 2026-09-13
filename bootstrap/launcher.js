@@ -1,12 +1,13 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync, readFileSync, appendFileSync, rmSync, copyFileSync, renameSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, appendFileSync, rmSync, copyFileSync, renameSync, readdirSync, statSync } from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
 // ---------------------------------------------------------------------------
 // config
 // ---------------------------------------------------------------------------
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const REPO = 'justsadnyx-ux/convert2gif-source';
 const HOSTED_BY = 'https://convert2gif.pages.dev/';
 const GITHUB_LATEST = `https://api.github.com/repos/${REPO}/releases/latest`;
@@ -155,7 +156,11 @@ async function latestRelease() {
   const res = await fetch(GITHUB_LATEST, { headers: { 'User-Agent': 'Convert2GIF-Bootstrap' } });
   if (!res.ok) return null;
   const j = await res.json();
-  const assets = (j.assets || []).map(a => ({ name: a.name, url: a.browser_download_url }));
+  const assets = (j.assets || []).map(a => ({
+    name: a.name,
+    url: a.browser_download_url,
+    digest: (a.digest || '').replace(/^sha256:/i, '') || null,
+  }));
   return {
     tag: j.tag_name,
     appZip: assets.find(a => a.name.startsWith(APP_ASSET_PREFIX)) || null,
@@ -163,13 +168,30 @@ async function latestRelease() {
   };
 }
 
-async function download(url, dest) {
+async function download(url, dest, onProg) {
   mkdirSync(path.dirname(dest), { recursive: true });
   const res = await fetch(url);
   if (!res.ok) throw new Error('fetch ' + res.status);
-  const buf = Buffer.from(await res.arrayBuffer());
-  writeFileSync(dest, buf);
-  return dest;
+  const total = Number(res.headers.get('content-length') || 0);
+  const reader = res.body.getReader();
+  const chunks = [];
+  let got = 0;
+  let lastPct = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(Buffer.from(value));
+    got += value.length;
+    if (onProg && total) {
+      const pct = Math.round((got / total) * 100);
+      if (pct - lastPct >= 5) { lastPct = pct; onProg(pct); }
+    }
+  }
+  writeFileSync(dest, Buffer.concat(chunks));
+}
+
+function sha256File(p) {
+  return createHash('sha256').update(readFileSync(p)).digest('hex');
 }
 
 function extractZip(zipPath, destDir) {
@@ -182,8 +204,12 @@ function extractZip(zipPath, destDir) {
 
 function npmInstall(appDir) {
   const args = process.platform === 'win32' ? ['/c', 'npm', 'install', '--no-audit', '--no-fund'] : ['npm', 'install', '--no-audit', '--no-fund'];
-  const r = run('cmd', args, { cwd: appDir, timeout: 600000 });
-  return r.status === 0;
+  return new Promise((resolve) => {
+    const p = spawn('cmd', args, { cwd: appDir, windowsHide: true, stdio: 'ignore' });
+    const t = setTimeout(() => { try { p.kill(); } catch { /* noop */ } resolve(false); }, 600000);
+    p.on('exit', (code) => { clearTimeout(t); resolve(code === 0); });
+    p.on('error', () => { clearTimeout(t); resolve(false); });
+  });
 }
 
 function moduleOk(appDir) {
@@ -201,7 +227,7 @@ function appHealth(appDir) {
   return checks;
 }
 
-async function provisionApp(version, force) {
+async function provisionApp(version, force, onProg) {
   if (!force) {
     const appDir = path.join(APPS_ROOT, 'v' + version);
     if (existsSync(path.join(appDir, 'bot.js')) && moduleOk(appDir)) {
@@ -209,12 +235,12 @@ async function provisionApp(version, force) {
       return { ok: true, appDir, skipped: true };
     }
   }
-  broadcast({ t: 'scene', name: 'download' });
+  broadcast({ t: 'scene', name: 'download', pct: 3 });
   logLine(`Pulling down Convert2GIF app v${version}...`);
   const rel = await latestRelease();
   if (!rel || !rel.appZip) throw new Error('no app asset found');
   const zip = path.join(UPDATES_DIR, rel.appZip.name);
-  await download(rel.appZip.url, zip);
+  await download(rel.appZip.url, zip, (p) => { if (onProg) onProg(p); else broadcast({ t: 'scene', name: 'download', pct: 3 }); });
   const appDir = path.join(APPS_ROOT, 'v' + version);
   rmSync(appDir, { recursive: true, force: true });
   logLine('Unpackin da goodz...');
@@ -225,7 +251,7 @@ async function provisionApp(version, force) {
     if (!npmInstall(appDir)) throw new Error('npm install failed (2)');
   }
   saveState({ ...loadState(), installed: version, appDir });
-  broadcast({ t: 'scene', name: 'download', done: true });
+  broadcast({ t: 'scene', name: 'download', pct: 100, done: true });
   logLine(`App ready: v${version}. Config stays safe in %APPDATA%.`);
   return { ok: true, appDir, skipped: false };
 }
@@ -360,16 +386,16 @@ function saveNewConfig(token, clientId) {
 // ---------------------------------------------------------------------------
 // self-heal + repair
 // ---------------------------------------------------------------------------
-function healApp() {
+async function healApp() {
   const st = loadState();
   if (!st.appDir) return;
   logLine('🩹 self-heal: reinstallin deps...');
-  run('cmd', ['/c', 'npm', 'install', '--no-audit', '--no-fund', '--force'], { cwd: st.appDir, timeout: 600000 });
+  await npmInstall(st.appDir);
   if (!moduleOk(st.appDir)) {
     logLine('🩹 deps still broken — re-pullin clean app...');
-    provisionApp(st.installed || APP_VERSION, true).then(() => {
-      broadcast({ t: 'state' });
-    }).catch((e) => logLine('repair failed: ' + e.message));
+    try {
+      await provisionApp(st.installed || APP_VERSION, true);
+    } catch (e) { logLine('repair failed: ' + e.message); }
   }
   broadcast({ t: 'state' });
 }
@@ -398,52 +424,85 @@ async function applyUpdate() {
   if (!rel) throw new Error('no release found');
   const newer = isNewer(rel.tag, APP_VERSION);
   if (!newer) throw new Error('already latest');
-  broadcast({ t: 'scene', name: 'download' });
+  broadcast({ t: 'scene', name: 'download', pct: 2 });
   logLine(`UPDATING to ${rel.tag}...`);
 
   if (botProc) stopBot();
 
-  // 1) app package -> versioned dir, config untouched (lives in %APPDATA%)
+  // 1) app package -> versioned dir (config untouched in %APPDATA%)
   if (rel.appZip) {
     try {
-      await provisionApp(rel.tag, true);
-    } catch (e) { logLine('app update failed: ' + e.message); }
+      await provisionApp(rel.tag, true, (p) => broadcast({ t: 'scene', name: 'download', pct: p }));
+    } catch (e) {
+      logLine('app update failed (keeping current app): ' + e.message);
+    }
   }
 
-  // 2) new exe -> swap self
+  // 2) new exe -> run it, it deletes the old files itself
   if (rel.exe) {
     logLine('Grabin new bootstrapper...');
     const newExe = path.join(UPDATES_DIR, EXE_ASSET);
-    await download(rel.exe.url, newExe);
+    await download(rel.exe.url, newExe, (p) => broadcast({ t: 'scene', name: 'download', pct: p }));
+
+    const hdr = readFileSync(newExe);
+    if (hdr[0] !== 0x4d || hdr[1] !== 0x5a) throw new Error('downloaded exe is not a valid program — refusing');
+    if (rel.exe.digest && sha256File(newExe) !== rel.exe.digest) {
+      rmSync(newExe, { force: true });
+      throw new Error('checksum mismatch — update cancelled');
+    }
+
     const self = process.execPath;
-    broadcast({ t: 'scene', name: 'download', done: true });
-    logLine('Swappin myself out — hol on...');
-    // hidden: rename old, copy new, relaunch, replace me
-    const script = [
-      `Start-Sleep -Milliseconds 900`,
-      `$self='${self.replace(/'/g, "''")}'`,
-      `$new='${newExe.replace(/'/g, "''")}'`,
-      `try { Rename-Item -LiteralPath $self -NewName ('Convert2GIF-Bootstrap.old.exe') -Force -ErrorAction Stop } catch {}`,
-      `Copy-Item -LiteralPath $new -Destination $self -Force`,
-      `Start-Process -FilePath $self`,
-      `Start-Sleep -Milliseconds 300`,
-      `try { Remove-Item -LiteralPath ($self + '.old') -Force -ErrorAction SilentlyContinue } catch {}`,
-      `try { Remove-Item -LiteralPath $self.Replace('.exe','.old.exe') -Force -ErrorAction SilentlyContinue } catch {}`,
-      `Stop-Process -Id ${process.pid} -Force -ErrorAction SilentlyContinue`,
-    ].join('; ');
-    spawn('powershell', ['-NoProfile', '-WindowStyle', 'Hidden', '-Command', script], { detached: true, stdio: 'ignore' });
-    setTimeout(() => { try { process.exit(0); } catch { /* noop */ } }, 2500);
+    broadcast({ t: 'scene', name: 'download', pct: 100, done: true });
+    logLine('Openin the new bootstrap — it cleans up the old files by itself.');
+    const arg = '--post-update=' + self;
+    spawn(newExe, [arg], { detached: true, stdio: 'ignore', windowsHide: true });
+    logLine('Old bootstrap shutting down now.');
+    setTimeout(() => process.exit(0), 1500);
     return { ok: true, swapping: true };
   }
 
-  broadcast({ t: 'scene', name: 'download', done: true });
-  broadcast({ t: 'state' });
+  broadcast({ t: 'scene', name: 'download', pct: 100, done: true });
   return { ok: true };
+}
+
+// runs inside the NEW process: waits for the old exe to fully exit, then deletes
+// it + any stale versioned app dirs / backups. Config is never touched.
+async function cleanupAfterUpdate(oldExePath) {
+  if (!oldExePath) return;
+  logLine('New bootstrap is up — cleanin up the old...');
+  await sleep(1800);
+  for (let i = 0; i < 60; i++) {
+    try { rmSync(oldExePath, { force: true }); break; }
+    catch { await sleep(400); }
+  }
+  const st = loadState();
+  const keep = st.appDir || '';
+  for (const entry of readdirSync(APPS_ROOT)) {
+    const full = path.join(APPS_ROOT, entry);
+    if (full !== keep) {
+      try { if (statSync(full).isDirectory()) rmSync(full, { recursive: true, force: true }); } catch { /* locked or gone */ }
+    }
+  }
+  cleanupBackups();
+  logLine(`Old files cleaned. We on v${APP_VERSION} now, config safe.`);
+}
+
+function cleanupBackups() {
+  const here = path.dirname(process.execPath);
+  for (const f of ['Convert2GIF-Bootstrap.old.exe', 'Convert2GIF-Bootstrap.bak.exe', 'Convert2GIF-Bootstrap.old.exe.old']) {
+    for (const p of [path.join(here, f), path.join(UPDATES_DIR, f)]) {
+      try { if (existsSync(p)) rmSync(p, { force: true }); } catch { /* locked */ }
+    }
+  }
 }
 
 function showFlash(msg) {
   lastFlashMsg = msg;
   broadcast({ t: 'flash', msg });
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 // ---------------------------------------------------------------------------
@@ -658,12 +717,38 @@ function firstRun() {
 // ---------------------------------------------------------------------------
 // boot
 // ---------------------------------------------------------------------------
+function getArgs() {
+  const out = { postUpdate: null, console: false };
+  for (const a of process.argv.slice(2)) {
+    const m = String(a).match(/^--post-update=(.+)$/);
+    if (m) out.postUpdate = m[1].trim();
+    if (String(a).trim() === '--console') out.console = true;
+  }
+  return out;
+}
+
+// no terminal look: hide the console window via WinAPI unless --console was given
+function hideConsoleWindow() {
+  try {
+    const k = Bun.FFI.dlopen('kernel32.dll', {
+      GetConsoleWindow: { args: [], returns: 'ptr' },
+      ShowWindow: { args: ['ptr', 'int'], returns: 'int' },
+    });
+    const h = k.symbols.GetConsoleWindow();
+    if (h) k.symbols.ShowWindow(h, 0);
+  } catch { /* noop */ }
+}
+
 function boot() {
   ensureDirs();
   ensureNode(false);
   logLine('Convert2GIF Bootstrapper v' + APP_VERSION + ' — ' + HOSTED_BY);
   logLine('Data lives at: ' + USERDATA + ' (config survives updates)');
 
+  const args = getArgs();
+  if (args.postUpdate) {
+    logLine('Started as the updated build. Old bootstrap: ' + args.postUpdate);
+  }
   firstRun();
 
   const srv = startServer();
@@ -676,7 +761,23 @@ function boot() {
   logLine('Control panel: http://127.0.0.1:' + port + '/ (token: ' + token + ')');
   if (st.ips.length) logLine('📱 Mobile (BETA) on LAN: http://' + st.ips[0] + ':' + port + '/#' + token);
 
-  setTimeout(() => openBrowser(port, token), 500);
+  if (args.postUpdate) {
+    setTimeout(() => { cleanupAfterUpdate(args.postUpdate); }, 1200);
+  } else {
+    setTimeout(cleanupBackups, 4000);
+  }
+
+  // When driven by the desktop GUI, don't pop a browser — the native window is the UI.
+  if (!process.env.CONVERT2GIF_NOBROWSER) {
+    setTimeout(() => openBrowser(port, token), 500);
+  }
 }
 
-boot();
+try {
+  const args = getArgs();
+  if (!args.console) hideConsoleWindow();
+  boot();
+} catch (e) {
+  try { logLine('FATAL on boot: ' + (e && e.stack || e)); } catch { /* noop */ }
+  setTimeout(() => process.exit(1), 300);
+}

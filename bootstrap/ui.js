@@ -147,7 +147,7 @@ input.scene-name { display:none; }
     <label>BOT TOKEN</label>
     <input id="inToken" type="password" placeholder="paste yo token"/>
     <label>CLIENT / APPLICATION ID (digits) — optional</label>
-    <input id="inClient" placeholder="e.g. <YOUR_APPLICATION_ID>"/>
+    <input id="inClient" placeholder="e.g. 1547681467176591400"/>
     <div class="btnrow" style="margin-top:16px">
       <button class="btn start" id="btnSaveCfg">SAVE</button>
       <button class="btn ghost" id="btnCloseCfg">NAH</button>
@@ -292,6 +292,7 @@ input.scene-name { display:none; }
     }
   }
   var lastShown = null;
+  var dlOn = false;
 
   function addLog(line) {
     var esc = String(line).replace(/[<>&]/g, function(c){ return c==='<'?'&lt;':c==='>'?'&gt;':'&amp;'; });
@@ -317,7 +318,13 @@ input.scene-name { display:none; }
         }
         else if (m.t==='flash') toast(m.msg);
         else if (m.t==='scene'){
-          if (m.name==='download'){ scene('download','😤 '+(m.done?'packed & READY':'DOWNLINK ACTIVE'), pick(DOWN_LINES), m.done?'':'grabbin from the cloud...'); if (m.done) setTimeout(function(){ sceneDone(true); }, 600); }
+          if (m.name==='download'){
+            if (m.done){ progress(100); dlOn=false; sceneDone(true); }
+            else if (typeof m.pct === 'number'){
+              if (!dlOn){ dlOn=true; scene('download','😤 DOWNLINK ACTIVE', pick(DOWN_LINES), 'grabbin from the cloud...'); }
+              progress(m.pct);
+            } else { if (!dlOn){ dlOn=true; scene('download','😤 DOWNLINK ACTIVE', pick(DOWN_LINES), ''); } }
+          }
           else if (m.name==='start'){ scene('start','LAUNCH SEQUENCE','INITIATE '+ pick(START_LINES) +' — HOLD ON'); setTimeout(function(){ sceneDone(true,'BOT IS LIVE. WE EATING GOOD'); }, 2600); }
         }
       };

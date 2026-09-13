@@ -10,7 +10,7 @@ import { imageToGif, imgInfo, downloadAttachment, isSupportedImage } from './med
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOSTED_BY = 'https://convert2gif.pages.dev/';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 
 // Config/control live OUTSIDE the app folder (in %APPDATA%\Convert2GIF) so they
 // survive app updates. The bootstrapper sets CONVERT2GIF_USERDATA.

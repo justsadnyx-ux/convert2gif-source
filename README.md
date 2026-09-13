@@ -1,6 +1,6 @@
 # Convert2GIF
 
-A Discord bot that turns PNG/JPG/GIF images into **real static GIF files**, now open source and self-hostable.
+A Discord bot that turns PNG/JPG/GIF images into **real static GIF files** — open source and self-hostable.
 
 **Hosted by [convert2gif.pages.dev](https://convert2gif.pages.dev/)**
 
@@ -10,42 +10,52 @@ Everything is published on the [Releases](https://github.com/justsadnyx-ux/conve
 
 | Asset | What it is |
 | ----- | ---------- |
-| `Convert2GIF-Bootstrap.exe` | Windows bootstrapper with a browser-based control panel. Installs Node.js + the bot, manages it, self-heals, self-updates. **Start here.** |
+| `convert2gif-bootstrap-v1.3.0-win.zip` | **Windows desktop bootstrapper (native GUI — no browser, no terminal).** Contains `Convert2GIF-Bootstrap.exe` (the control panel window) + `c2g-host.exe` (the engine). **Start here.** |
 | `convert2gif-app-*.zip` | The `/gif`-only bot package the bootstrapper installs automatically. |
-| `Convert2GIF-Mobile-BETA.apk` | Android app to control the same bootstrapper from your phone (same Wi-Fi). |
 
-## Quick start
+macOS (`.dmg`) and mobile builds are coming soon.
 
-1. Download `Convert2GIF-Bootstrap.exe` from the latest release.
-2. Run it — a control panel opens in your browser.
-3. Enter your bot token + application id once (Settings).
-4. Press start. That's it.
+## Quick start (Windows)
+
+1. Download `convert2gif-bootstrap-v1.3.0-win.zip` from the latest release and **extract both .exe files to the same folder**.
+2. Run `Convert2GIF-Bootstrap.exe`. A desktop window opens (it also sits in the system tray).
+3. Enter your bot **Token** and **Application ID** (from the Discord Developer Portal), press **Save Config**.
+4. Press **Start Bot**. Done.
 
 Your config is stored in `%APPDATA%\Convert2GIF\` — **you enter your token once, even across updates.**
 
 ## Features
 
-- Real browser UI — no terminal required.
+- **Real native desktop window** — no browser tab, no terminal. Double-click to run.
+- Tray icon: closing the window keeps the bot online; reopen from the tray.
+- One window for everything: config, start/stop, presence, live log, updates, repair.
 - Config survives updates (stored outside the app folder).
 - Self-healing: auto reinstalls missing packages or re-pulls a clean app if the bot fails to start.
-- Self-updating: downloads new bootstrapper + app releases; config untouched.
-- Presence control: online / away / DND / invisible.
-- Mobile BETA: control from your phone over LAN, or install the panel as an app (PWA). Standalone Android APK published.
+- Self-updating: downloads new releases, the new build cleans up the old files; config untouched.
+- Presence control: online / idle / DND / invisible.
 - Branding "Hosted by convert2gif.pages.dev" shown in bot replies and activity.
 
 ## Repository layout
 
 | Path | Purpose |
 | ---- | ------- |
-| `bootstrap/` | Bootstrapper source (`launcher.js` + bundled browser UI `ui.js`). Build: `bun build --compile --minify bootstrap/launcher.js --outfile Convert2GIF-Bootstrap.exe` |
+| `gui/` | Native Windows GUI (`MainForm.cs` C# WinForms) + `build.ps1` (builds the release zip). |
+| `bootstrap/` | Host engine (`launcher.js` + bundled `ui.js`): installs Node.js, auto-provisions the bot, self-heal + self-update, local JSON API the GUI drives. |
 | `app/` | The `/gif`-only bot installed by the bootstrapper (`bot.js`, `media.js`). |
 | `selfhost/` | Same `/gif`-only bot as a standalone Node script (env-var config). |
-| `android/` | Android app (BETA) source + `build-apk.ps1` (no Gradle required). |
 | `public/` | The website (home, terms, privacy, discord redirect). |
 | `functions/` | Cloudflare Pages functions: interaction server, `/source` redirect, converter/stats/poll APIs. |
 | `functions/_lib/media.js` | Pure image → GIF conversion core (works on Workers and plain Node). |
 | `poller/` | Gateway worker (messages, reactions, moderation, logging). |
 | `scripts/` | Command registration + profile generators. |
+
+## Building the Windows bootstrapper
+
+```
+bun install
+powershell -ExecutionPolicy Bypass -File gui/build.ps1
+# -> dist/convert2gif-bootstrap-v1.3.0-win.zip (+ app zip)
+```
 
 ## Homepage
 
