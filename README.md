@@ -4,6 +4,9 @@ A Discord bot that turns PNG/JPG/GIF images into **real static GIF files** — o
 
 **Hosted by [convert2gif.pages.dev](https://convert2gif.pages.dev/)**
 
+![CI](https://github.com/justsadnyx-ux/convert2gif-source/actions/workflows/ci.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/license-MIT-brightgreen.svg)
+
 ## Download
 
 Everything is published on the [Releases](https://github.com/justsadnyx-ux/convert2gif-source/releases) page:

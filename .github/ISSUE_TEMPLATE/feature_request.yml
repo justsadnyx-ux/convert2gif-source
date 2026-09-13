@@ -1,0 +1,23 @@
+name: Feature request
+description: Something you would like to see.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What do you want?
+      description: Describe the feature and the problem it solves (the "why").
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Windows desktop bootstrapper (GUI)
+        - Host engine / provisioning
+        - The /gif bot
+        - Website / functions / poller
+        - macOS .dmg / mobile (coming soon)
+    validations:
+      required: true

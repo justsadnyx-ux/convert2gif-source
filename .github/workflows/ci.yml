@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install
+        run: bun install --frozen-lockfile || bun install
+      - name: Syntax gate (host engine + browser UI bundle)
+        run: bun build bootstrap/launcher.js --outdir /tmp/ci
+      - name: Check app bot syntax
+        run: node --check app/bot.js
+      - name: Check media core syntax
+        run: node --check app/media.js
+      - name: Secret scan
+        run: |
+          if rg -il "MTU0NzY4|GlY1Fa|cfut_Q|BeaStly" --glob '!node_modules/**' . ; then
+            echo "Secret-like string found in the tree" && exit 1
+          fi

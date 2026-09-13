@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discord
+    url: https://convert2gif.pages.dev/discord
+    about: Get setup help in the Discord server.
+  - name: Security
+    url: https://github.com/justsadnyx-ux/convert2gif-source/security
+    about: Report vulnerabilities privately, never in an issue.

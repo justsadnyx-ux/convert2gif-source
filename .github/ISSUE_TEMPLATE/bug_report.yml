@@ -1,0 +1,39 @@
+name: Bug report
+description: Something broke.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect and what actually happened?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release tag (e.g. v1.3.0) or commit
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - Windows desktop bootstrapper (GUI)
+        - Host engine / provisioning
+        - The /gif bot itself
+        - Website / functions / poller
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      placeholder: Steps, and paste the relevant line(s) from %APPDATA%\Convert2GIF\logs\bot.log
+  - type: input
+    id: token
+    attributes:
+      label: Never include
+      description: Do not paste bot tokens or secret IDs anywhere in this report.
