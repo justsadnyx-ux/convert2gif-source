@@ -9,13 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
-      - name: Install
-        run: bun install --frozen-lockfile || bun install
-      - name: Syntax gate (host engine + browser UI bundle)
-        run: bun build bootstrap/launcher.js --outdir /tmp/ci
+          node-version: 22
       - name: Check app bot syntax
         run: node --check app/bot.js
       - name: Check media core syntax

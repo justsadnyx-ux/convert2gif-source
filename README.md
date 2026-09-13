@@ -1,92 +1,66 @@
 # Convert2GIF
 
-A Discord bot that turns PNG/JPG/GIF images into **real static GIF files** — open source and self-hostable.
+An **open-source** Discord bot that turns PNG/JPG/GIF images into **real static GIF files**.
 
 **Hosted by [convert2gif.pages.dev](https://convert2gif.pages.dev/)**
 
 ![CI](https://github.com/justsadnyx-ux/convert2gif-source/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-brightgreen.svg)
 
-## Download
-
-Everything is published on the [Releases](https://github.com/justsadnyx-ux/convert2gif-source/releases) page:
-
-| Asset | What it is |
-| ----- | ---------- |
-| `convert2gif-bootstrap-v1.3.0-win.zip` | **Windows desktop bootstrapper (native GUI — no browser, no terminal).** Contains `Convert2GIF-Bootstrap.exe` (the control panel window) + `c2g-host.exe` (the engine). **Start here.** |
-| `convert2gif-app-*.zip` | The `/gif`-only bot package the bootstrapper installs automatically. |
-
-macOS (`.dmg`) and mobile builds are coming soon.
-
-## Quick start (Windows)
-
-1. Download `convert2gif-bootstrap-v1.3.0-win.zip` from the latest release and **extract both .exe files to the same folder**.
-2. Run `Convert2GIF-Bootstrap.exe`. A desktop window opens (it also sits in the system tray).
-3. Enter your bot **Token** and **Application ID** (from the Discord Developer Portal), press **Save Config**.
-4. Press **Start Bot**. Done.
-
-Your config is stored in `%APPDATA%\Convert2GIF\` — **you enter your token once, even across updates.**
-
-## Self-host from source (Node or Docker)
-
-No Windows machine? Run the bot standalone or in a container:
-
-- [docs/SETUP.md](docs/SETUP.md) — full step-by-step (Discord app, bootstrapper, config, updates, commands).
-- [docs/DOCKER.md](docs/DOCKER.md) — `docker compose up -d --build`; config mounted at `/data`, image has no secrets.
-- [docs/SELFHOST.md](docs/SELFHOST.md) — plain Node ≥ 22 + pm2/systemd, including auto-restart and update automation.
+- Plain Node.js ≥ 22 — no Discord library, no build step.
+- Pure-JS conversion core (`gifenc`, `jpeg-js`, `omggif`, `upng-js`).
+- Self-contained: config lives next to you (env-pointed folder), presence and stop controls are JSON files.
 
 ## Commands
 
-The bot registers `/help`, `/info`, `/uptime`, and `/gif` (convert an image URL or attachment to a real static GIF file).
+| Command | Description |
+| ------- | ----------- |
+| `/gif` | Convert an attached image or `url:` to a real static GIF file |
+| `/help` | List all commands |
+| `/info` | Version, uptime, ping, hosting |
+| `/uptime` | How long the bot has been running |
+| `/stats` | GIF conversions, boots, servers, uptime |
+| `/presence` | Change bot presence (owner/Admin only) |
 
-## Features
+## Run it
 
-- **Real native desktop window** — no browser tab, no terminal. Double-click to run.
-- Tray icon: closing the window keeps the bot online; reopen from the tray.
-- One window for everything: config, start/stop, presence, live log, updates, repair.
-- Config survives updates (stored outside the app folder).
-- Self-healing: auto reinstalls missing packages or re-pulls a clean app if the bot fails to start.
-- Self-updating: downloads new releases, the new build cleans up the old files; config untouched.
-- Presence control: online / idle / DND / invisible.
-- Branding "Hosted by convert2gif.pages.dev" shown in bot replies and activity.
+```bash
+npm install
+mkdir -p ~/.convert2gif   # or %APPDATA%\Convert2GIF on Windows
+node bot.js
+```
 
-## Repository layout
+The bot reads `config.json` from the folder pointed at by `CONVERT2GIF_USERDATA`
+(defaults to `./data`):
+
+```json
+{
+  "token": "your_discord_bot_token",
+  "clientId": "1547681467176591400",
+  "ownerIds": "your_user_id"
+}
+```
+
+Create the application and token in the [Discord Developer Portal](https://discord.com/developers/applications), then add the bot to a server (permissions: Read Messages, Send Messages, Read Message History, Attach Files). The bot registers its slash commands automatically on boot.
+
+Also watched live (re-read every 4s) — `control.json`:
+
+```json
+{ "presence": "dnd" }
+```
+
+## Files
 
 | Path | Purpose |
 | ---- | ------- |
-| `gui/` | Native Windows GUI (`MainForm.cs` C# WinForms) + `build.ps1` (builds the release zip). |
-| `bootstrap/` | Host engine (`launcher.js` + bundled `ui.js`): installs Node.js, auto-provisions the bot, self-heal + self-update, local JSON API the GUI drives. |
-| `app/` | The `/gif`-only bot installed by the bootstrapper (`bot.js`, `media.js`). |
-| `selfhost/` | Same `/gif`-only bot as a standalone Node script (env-var config). |
-| `public/` | The website (home, terms, privacy, discord redirect). |
-| `functions/` | Cloudflare Pages functions: interaction server, `/source` redirect, converter/stats/poll APIs. |
-| `functions/_lib/media.js` | Pure image → GIF conversion core (works on Workers and plain Node). |
-| `poller/` | Gateway worker (messages, reactions, moderation, logging). |
-| `scripts/` | Command registration + profile generators. |
+| `app/bot.js` | The slash-command bot (registers + serves the commands). |
+| `app/media.js` | Pure image → GIF conversion core. |
+| `app/package.json` | Dependencies. |
 
-## Building the Windows bootstrapper
+## Contributing
 
-```
-bun install
-powershell -ExecutionPolicy Bypass -File gui/build.ps1
-# -> dist/convert2gif-bootstrap-v1.3.0-win.zip (+ app zip)
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Security issues: [SECURITY.md](SECURITY.md).
 
-## Homepage
+## License
 
-The site homepage redirects here so GitHub's **Releases + README** are the single source of truth.
-`https://convert2gif.pages.dev/source?code=<code>` also redirects here.
-
-## Hosting the full bot (Cloudflare Pages)
-
-Replace every `<YOUR_...>` placeholder (IDs were scrubbed from the public tree),
-set secrets (`BOT_TOKEN`, `POLL_SECRET`, `DISCORD_CLIENT_ID`), configure the
-`CONVERT_DATA` KV namespace id in `wrangler.toml`, create the AutoMod rules and
-roles, then:
-
-```
-wrangler pages deploy --project-name convert2gif
-wrangler deploy -c poller/wrangler.toml   # gateway worker + cron
-```
-
-Validation / moderation / logging all ship in `functions/_lib/slash.js` and `poller/src/bot.js`.
+[MIT](LICENSE). Keep the "Hosted by https://convert2gif.pages.dev/" branding visible in bot replies and activity when forking.

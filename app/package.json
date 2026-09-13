@@ -1,9 +1,14 @@
 {
-  "name": "convert2gif-app",
-  "version": "1.1.0",
-  "private": true,
+  "name": "convert2gif",
+  "version": "1.0.0",
+  "private": false,
   "type": "module",
-  "description": "Convert2GIF /gif-only self-hosted bot (managed by the bootstrapper)",
+  "description": "Convert2GIF — open-source Discord bot that turns images into real static GIF files",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justsadnyx-ux/convert2gif-source"
+  },
   "scripts": {
     "start": "node bot.js"
   },
