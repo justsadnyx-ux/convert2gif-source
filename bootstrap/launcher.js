@@ -306,6 +306,7 @@ function onBotExit(code, startedAt) {
   const fatal = /HTTP 401|Invalid token|401 Unauthorized/i.test(readLastLines(40));
   if (fatal) { logLine('Bot login rejected (bad token). Fix ' + CONFIG_PATH + ' and press [R].'); return; }
   if (manualStop) { logLine('Bot stopped.'); return; }
+  if (getControl().stop) { logLine('Bot stopped (control.json stop).'); return; }
   if (quickExit || moduleFail) {
     healCount++;
     if (healCount <= 2) {
