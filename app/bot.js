@@ -1,10 +1,10 @@
-﻿// Convert2GIF — "/gif"-only self-hosted bot (plain Node.js >= 22).
-// Reads config.json, watches control.json for
-// presence changes, registers/serves /gif. Hosted-by branding included.
+﻿// Convert2GIF — open-source Discord bot (plain Node.js >= 22).
+// Commands: /gif (images -> real static GIF files), /help.
+// Reads config.json; control.json can change presence or stop the bot (re-read
+// every 4s). Hosted-by branding included.
 
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { imageToGif, imgInfo, downloadAttachment, isSupportedImage } from './media.js';
 
@@ -12,8 +12,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOSTED_BY = 'https://convert2gif.pages.dev/';
 const APP_VERSION = '1.3.0';
 
-// Config/control live OUTSIDE the app folder (in %APPDATA%\Convert2GIF) so they
-// The folder can be pointed at with CONVERT2GIF_USERDATA.
+// Config/control live OUTSIDE this folder so they survive redeploys.
+// Point CONVERT2GIF_USERDATA at wherever config.json lives (defaults to ./data).
 const DATA_DIR = process.env.CONVERT2GIF_USERDATA || path.join(__dirname, 'data');
 const CONFIG_PATH = process.env.CONVERT2GIF_CONFIG || path.join(DATA_DIR, 'config.json');
 const CONTROL_PATH = process.env.CONVERT2GIF_CONTROL || path.join(DATA_DIR, 'control.json');
@@ -46,65 +46,7 @@ const GIF_COMMAND = {
 const COMMANDS = [
   GIF_COMMAND,
   { name: 'help', description: 'See every command and how Convert2GIF works', options: [] },
-  { name: 'info', description: 'Bot status: version, uptime, ping, hosting', options: [] },
-  { name: 'uptime', description: 'How long this bot has been running', options: [] },
-  { name: 'stats', description: 'GIF conversion count, boots, servers, uptime', options: [] },
-  { name: 'presence', description: 'Change bot presence (online, idle, dnd, invisible)', options: [
-    { type: 3, name: 'status', description: 'New status', required: true, choices: [
-      { name: 'Online', value: 'online' },
-      { name: 'Idle', value: 'idle' },
-      { name: 'Do Not Disturb', value: 'dnd' },
-      { name: 'Invisible', value: 'invisible' },
-    ] },
-  ] },
 ];
-const bootedAt = Date.now();
-
-const STATS_PATH = path.join(DATA_DIR, 'stats.json');
-
-function loadStats() {
-  try { return JSON.parse(fs.readFileSync(STATS_PATH, 'utf8')); } catch { return { conversions: 0, boots: 0 }; }
-}
-function saveStats(s) { try { fs.writeFileSync(STATS_PATH, JSON.stringify(s, null, 2)); } catch { /* noop */ } }
-const stats = loadStats();
-function bumpStats(key) { stats[key] = (stats[key] || 0) + 1; saveStats(stats); }
-
-function writeControl(patch) {
-  const cur = readControl() || { presence: 'online' };
-  const next = { ...cur, ...patch, at: Date.now() };
-  try { fs.writeFileSync(CONTROL_PATH, JSON.stringify(next, null, 2)); } catch { /* noop */ }
-  return next;
-}
-
-const ownerList = Array.isArray(config.ownerIds)
-  ? config.ownerIds.map(String)
-  : String(config.ownerIds || '').split(',').map((s) => s.trim()).filter(Boolean);
-const OWNERS = new Set(ownerList);
-
-function callerId(inter) {
-  return String(inter.user ? inter.user.id : (inter.member && inter.member.user ? inter.member.user.id : ''));
-}
-
-function isManager(inter) {
-  if (OWNERS.size && OWNERS.has(callerId(inter))) return true;
-  const perms = inter.member ? String(inter.member.permissions || '0') : '0';
-  try { return (BigInt(perms) & 8n) === 8n; } catch { return false; }
-}
-
-function interOpts(inter) {
-  return Object.fromEntries((inter.data.options || []).map((o) => [o.name, o.value]));
-}
-
-function uptimeString() {
-  const secs = Math.floor((Date.now() - bootedAt) / 1000);
-  const d = Math.floor(secs / 86400), h = Math.floor((secs % 86400) / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
-  return `${d}d ${h}h ${m}m ${s}s`;
-}
-
-function snowflakeAge(id) {
-  const ts = Number(id) > 0 ? (Number(id) >> 22) + 1420070400000 : 0;
-  return ts > 0 ? Math.max(0, Date.now() - ts) : 0;
-}
 
 async function api(url, opts = {}) {
   const res = await fetch(`${API}${url}`, {
@@ -130,9 +72,8 @@ async function registerCommands() {
 }
 
 async function extractImage(inter) {
-  const data = inter.data || {};
   const resolved = inter.data.resolved || {};
-  for (const opt of data.options || []) {
+  for (const opt of inter.data.options || []) {
     if (opt.name === 'image' && opt.value) {
       const att = resolved.attachments && resolved.attachments[opt.value];
       if (att && isSupportedImage(att.filename)) {
@@ -179,53 +120,7 @@ function helpEmbed() {
   };
 }
 
-function infoEmbed(inter) {
-  return {
-    color: 0x14b8a6,
-    title: 'Convert2GIF',
-    description: 'Open-source image → real static GIF bot, self-hosted by you on your own machine.',
-    fields: [
-      { name: 'Version', value: APP_VERSION, inline: true },
-      { name: 'Uptime', value: uptimeString(), inline: true },
-      { name: 'Gateway ping', value: `${snowflakeAge(inter.id)}ms`, inline: true },
-      { name: 'Commands', value: `${COMMANDS.length}`, inline: true },
-      { name: 'Hosting', value: 'Open source — self-hosted Node', inline: true },
-    ],
-    footer: { text: `Hosted by ${HOSTED_BY}` },
-  };
-}
-
 async function runHelp(inter) { await reply(inter, helpEmbed()); }
-async function runInfo(inter) { await reply(inter, infoEmbed(inter)); }
-async function runUptime(inter) { await reply(inter, { color: 0x14b8a6, title: 'Uptime', description: `Online for ${uptimeString()}`, footer: { text: `v${APP_VERSION} · Hosted by ${HOSTED_BY}` } }); }
-
-function deny(inter) { return reply(inter, { color: 0xff5577, title: 'Denied', description: 'Only the bot owner or a server Admin can use this command.' }); }
-
-async function runStats(inter) {
-  const s = loadStats();
-  await reply(inter, {
-    color: 0x14b8a6,
-    title: 'Convert2GIF stats',
-    fields: [
-      { name: 'GIFs converted', value: String(s.conversions), inline: true },
-      { name: 'Boots', value: String(s.boots), inline: true },
-      { name: 'Servers', value: String(guildCount), inline: true },
-      { name: 'Uptime', value: uptimeString(), inline: true },
-      { name: 'Version', value: APP_VERSION, inline: true },
-    ],
-    footer: { text: `Hosted by ${HOSTED_BY}` },
-  });
-}
-
-async function runPresence(inter) {
-  if (!isManager(inter)) return deny(inter);
-  const o = interOpts(inter);
-  const status = ['online', 'idle', 'dnd', 'invisible'].includes(o.status) ? o.status : 'online';
-  writeControl({ presence: status, stop: false });
-  currentPresence = status;
-  sendPresence(status);
-  await reply(inter, { color: 0x14b8a6, title: 'Presence', description: `Bot status set to **${status}**.`, footer: { text: `Hosted by ${HOSTED_BY}` } });
-}
 
 async function runGif(inter) {
   await api(`/interactions/${inter.id}/${inter.token}/callback`, {
@@ -252,15 +147,10 @@ async function runGif(inter) {
       author: inter.member && inter.member.user ? { name: inter.member.user.username } : undefined,
     }].filter((e) => e.author),
   }));
-  try {
-    await api(`/webhooks/${config.clientId}/${inter.token}/messages/@original`, {
-      method: 'PATCH',
-      body: form,
-    });
-    bumpStats('conversions');
-  } catch {
-    edit(inter, 'Conversion done but upload failed.', 0xff5577);
-  }
+  await api(`/webhooks/${config.clientId}/${inter.token}/messages/@original`, {
+    method: 'PATCH',
+    body: form,
+  }).catch(() => edit(inter, 'Conversion done but upload failed.', 0xff5577));
 }
 
 async function handleInteraction(inter) {
@@ -273,10 +163,6 @@ async function handleInteraction(inter) {
   try {
     if (name === 'gif') await runGif(inter);
     else if (name === 'help') await runHelp(inter);
-    else if (name === 'info') await runInfo(inter);
-    else if (name === 'uptime') await runUptime(inter);
-    else if (name === 'stats') await runStats(inter);
-    else if (name === 'presence') await runPresence(inter);
   } catch (e) {
     console.log(`[interaction] ${name} failed: ${e.message}`);
     edit(inter, `Command **/${name}** ran into a problem. Check the logs.`, 0xff5577).catch(() => {});
@@ -290,7 +176,6 @@ let heartbeatTimer = null;
 let missed = 0;
 let currentPresence = 'online';
 let presenceTimer = null;
-let guildCount = 0;
 
 function readControl() {
   try {
@@ -379,7 +264,6 @@ async function connect() {
       case 0:
         if (p.t === 'READY') {
           sessionId = p.d.session_id;
-          guildCount = (p.d.guilds || []).length;
           log(`ready as ${p.d.user.username} — v${APP_VERSION} — Hosted by ${HOSTED_BY}`);
           currentPresence = readPresence() || 'online';
           sendPresence(currentPresence);
@@ -402,9 +286,7 @@ async function connect() {
 }
 
 async function main() {
-  log(`Convert2GIF /gif-only bot v${APP_VERSION} — Hosted by ${HOSTED_BY}`);
-  stats.boots += 1;
-  saveStats(stats);
+  log(`Convert2GIF v${APP_VERSION} — Hosted by ${HOSTED_BY}`);
   await registerCommands();
   watchPresence();
   await connect();

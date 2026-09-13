@@ -14,10 +14,7 @@ body:
     attributes:
       label: Scope
       options:
-        - Windows desktop bootstrapper (GUI)
-        - Host engine / provisioning
-        - The /gif bot
-        - Website / functions / poller
-        - macOS .dmg / mobile (coming soon)
+        - The /gif bot (bot.js / media.js)
+        - Setup / config / docs
     validations:
       required: true

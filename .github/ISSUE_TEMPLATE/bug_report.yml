@@ -21,10 +21,8 @@ body:
     attributes:
       label: Where
       options:
-        - Windows desktop bootstrapper (GUI)
-        - Host engine / provisioning
-        - The /gif bot itself
-        - Website / functions / poller
+        - The /gif bot (bot.js / media.js)
+        - Setup / config / docs
     validations:
       required: true
   - type: textarea

@@ -21,18 +21,17 @@ bun install
 
 ## Build
 
-Windows desktop bootstrapper (native GUI + engine):
+No build step — plain Node.js ≥ 22. Install deps in `app/` and run:
 
 ```
-powershell -ExecutionPolicy Bypass -File gui/build.ps1
-# outputs dist/convert2gif-bootstrap-v1.3.0-win.zip + app zip
+cd app && npm install && npm start
 ```
 
 Manual checks before submitting:
 
 ```
-bun build bootstrap/launcher.js --outdir /tmp/ci   # bundler + syntax gate
 node --check app/bot.js
+node --check app/media.js
 ```
 
 ## Releasing

@@ -14,23 +14,18 @@ Config
 
     CONVERT2GIF_USERDATA=/path/to/data   (defaults to ./data)
 
-  config.json:  { "token": "...", "clientId": "...", "ownerIds": "123,456" }
-  control.json: { "presence": "online" }   (online | idle | dnd | invisible)
+  config.json:  { "token": "...", "clientId": "..." }
 
-  control.json is re-read every 4s, so you can change presence or stop the
-  bot without restarting. ownerIds lets users run /presence from Discord
-  alongside server Admins.
+  control.json (optional, re-read every 4s):
+  { "presence": "online" }   (online | idle | dnd | invisible)
+  { "stop": true }           (graceful stop, picked up within ~4s)
 
 Commands
   /gif <attachment or url:>   -> reply with a real static GIF file
-  /help                       -> list all commands
-  /info                       -> version, uptime, ping
-  /uptime                     -> how long the bot has been running
-  /stats                      -> conversions, boots, servers, uptime
-  /presence <status>          -> change bot presence (owner/Admin)
+  /help                       -> list commands
 
 Files
-  bot.js       the slash command bot (registers + serves the commands)
+  bot.js       the slash command bot (registers + serves /gif and /help)
   media.js     pure image -> GIF conversion core
   package.json dependencies (gifenc, jpeg-js, omggif, upng-js)
 

@@ -16,11 +16,7 @@ An **open-source** Discord bot that turns PNG/JPG/GIF images into **real static 
 | Command | Description |
 | ------- | ----------- |
 | `/gif` | Convert an attached image or `url:` to a real static GIF file |
-| `/help` | List all commands |
-| `/info` | Version, uptime, ping, hosting |
-| `/uptime` | How long the bot has been running |
-| `/stats` | GIF conversions, boots, servers, uptime |
-| `/presence` | Change bot presence (owner/Admin only) |
+| `/help` | List commands |
 
 ## Run it
 
@@ -36,14 +32,13 @@ The bot reads `config.json` from the folder pointed at by `CONVERT2GIF_USERDATA`
 ```json
 {
   "token": "your_discord_bot_token",
-  "clientId": "1547681467176591400",
-  "ownerIds": "your_user_id"
+  "clientId": "your_application_id"
 }
 ```
 
 Create the application and token in the [Discord Developer Portal](https://discord.com/developers/applications), then add the bot to a server (permissions: Read Messages, Send Messages, Read Message History, Attach Files). The bot registers its slash commands automatically on boot.
 
-Also watched live (re-read every 4s) — `control.json`:
+Optionally watched live (re-read every 4s) — `control.json`:
 
 ```json
 { "presence": "dnd" }

@@ -25,5 +25,5 @@ soon as practical.
 - Never commit bot tokens, Cloudflare API tokens, or Discord IDs. IDs in this
   repo are scrubbed to `<YOUR_...>` placeholders on purpose.
 - Rotate any token you think may have leaked. The config lives outside the app
-  folder (`%APPDATA%\Convert2GIF\`) so updating never re-exposes it.
-- The bootstrapper stores config **locally only** — it is never uploaded.
+  folder (pointed at with `CONVERT2GIF_USERDATA`) so redeploys never re-expose it.
+- The bot stores config **locally only** — it is never uploaded.
