@@ -13,19 +13,14 @@ An **open-source** Discord bot that turns PNG/JPG/GIF images into **real static 
 
 ## Get it
 
-Prefer a single file? Grab **Convert2GIF.exe** from the
+Grab **Convert2GIF-v1.2.0-portable.zip** from the
 [Releases](https://github.com/justsadnyx-ux/convert2gif-source/releases) page —
-it's the whole bot compiled into one Windows terminal (console) app. Just put
-it in a folder, create `data\config.json`, and double-click it.
+it's the bot + a small console bootstrapper in one portable folder. Double-click
+`Convert2GIF.exe`; it installs dependencies, asks for your Discord token, hosts
+the bot in the terminal, restarts it if it crashes, and can update itself from
+GitHub.
 
-```json
-{
-  "token": "your_discord_bot_token",
-  "clientId": "your_application_id"
-}
-```
-
-Commands show the bot's log in the terminal; close the window (or Ctrl+C) to stop.
+Or run the bot from source (`app/`).
 
 ## Commands
 
@@ -33,6 +28,12 @@ Commands show the bot's log in the terminal; close the window (or Ctrl+C) to sto
 | ------- | ----------- |
 | `/gif` | Convert an attached image or `url:` to a real static GIF file |
 | `/help` | List commands |
+| `/info` | Version, presence, uptime, hosting |
+| `/uptime` | How long the bot has been online |
+| `/stats` | Conversions, boots, servers, uptime |
+| `/presence` | Change presence (owner / Admin only) |
+| `/restart` | Restart + repair deps (owner / Admin only) |
+| `/update` | Update to latest release (owner / Admin only) |
 
 ## Run from source
 

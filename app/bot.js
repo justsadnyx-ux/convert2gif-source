@@ -1,7 +1,6 @@
-﻿// Convert2GIF — open-source Discord bot (single-file Windows terminal exe or plain Node.js >= 22).
-// Commands: /gif (images -> real static GIF files), /help.
-// Reads config.json; control.json can change presence or stop the bot (re-read
-// every 4s). Hosted-by branding included.
+﻿// Convert2GIF v1.2.0 - open-source Discord bot (plain Node.js >= 22).
+// Commands: /gif /help /info /uptime /stats /presence /restart /update.
+// config/control/stats live in CONVERT2GIF_USERDATA (default ./data).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,14 +9,12 @@ import { imageToGif, imgInfo, downloadAttachment, isSupportedImage } from './med
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOSTED_BY = 'https://convert2gif.pages.dev/';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.2.0';
 
-// Config/control live OUTSIDE this folder so they survive redeploys.
-// Default: ./data next to the exe / working directory. Override with
-// CONVERT2GIF_USERDATA.
 const DATA_DIR = process.env.CONVERT2GIF_USERDATA || path.join(process.cwd(), 'data');
 const CONFIG_PATH = process.env.CONVERT2GIF_CONFIG || path.join(DATA_DIR, 'config.json');
 const CONTROL_PATH = process.env.CONVERT2GIF_CONTROL || path.join(DATA_DIR, 'control.json');
+const STATS_PATH = path.join(DATA_DIR, 'stats.json');
 
 function loadConfig() {
   if (!fs.existsSync(CONFIG_PATH)) {
@@ -34,20 +31,65 @@ function loadConfig() {
 
 const config = loadConfig();
 const API = 'https://discord.com/api/v10';
+const ADMIN_PERMISSION = 0x8n;
 
-const GIF_COMMAND = {
-  name: 'gif',
-  description: 'Turn an image into a real static GIF file',
-  options: [
-    { type: 3, name: 'url', description: 'Image URL (png, jpg, gif)', required: false },
-    { type: 11, name: 'image', description: 'Or attach an image', required: false },
-  ],
-};
+const PRESENCE_CHOICES = ['online', 'idle', 'dnd', 'invisible'].map((v) => ({ name: v, value: v }));
 
 const COMMANDS = [
-  GIF_COMMAND,
+  {
+    name: 'gif',
+    description: 'Turn an image into a real static GIF file',
+    options: [
+      { type: 3, name: 'url', description: 'Image URL (png, jpg, gif)', required: false },
+      { type: 11, name: 'image', description: 'Or attach an image', required: false },
+    ],
+  },
   { name: 'help', description: 'See every command and how Convert2GIF works', options: [] },
+  { name: 'info', description: 'Version, presence, uptime and hosting info', options: [] },
+  { name: 'uptime', description: 'How long the bot has been online', options: [] },
+  { name: 'stats', description: 'Conversion count, boots, servers, uptime', options: [] },
+  {
+    name: 'presence',
+    description: 'Change the bot presence (Admin or owner only)',
+    options: [{ type: 3, name: 'status', description: 'Presence to use', required: true, choices: PRESENCE_CHOICES }],
+  },
+  { name: 'restart', description: 'Restart the bot + repair deps (Admin or owner only)', options: [] },
+  { name: 'update', description: 'Update to the latest release (Admin or owner only)', options: [] },
 ];
+
+function readJson(p, fb) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return fb; } }
+function writeJson(p, obj) { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, JSON.stringify(obj, null, 2), 'utf8'); }
+
+function loadStats() { return readJson(STATS_PATH, {}); }
+function saveStats(s) { writeJson(STATS_PATH, s); }
+function bumpStats(prop) { const s = loadStats(); s[prop] = (s[prop] || 0) + 1; saveStats(s); }
+function getControl() { return readJson(CONTROL_PATH, { presence: 'online', stop: false, request: {} }); }
+function writeControl(patch) { const c = getControl(); writeJson(CONTROL_PATH, { ...c, ...patch, at: Date.now() }); }
+
+let bootedAt = Date.now();
+let guildCount = 0;
+let currentPresence = (getControl().presence) || 'online';
+
+function uptimeString() {
+  const s = Math.floor((Date.now() - bootedAt) / 1000);
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  const parts = [];
+  if (d) parts.push(d + 'd');
+  if (h || parts.length) parts.push(h + 'h');
+  if (m || parts.length) parts.push(m + 'm');
+  parts.push(sec + 's');
+  return parts.join(' ');
+}
+
+function callerId(inter) { return (inter.member && inter.member.user && inter.member.user.id) || (inter.user && inter.user.id) || null; }
+function isManager(inter) {
+  const id = callerId(inter);
+  if (!id) return false;
+  const owners = String(config.ownerIds || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (owners.includes(id)) return true;
+  const perm = inter.member && inter.member.permissions;
+  try { return (BigInt(perm || 0) & ADMIN_PERMISSION) === ADMIN_PERMISSION; } catch { return false; }
+}
 
 async function api(url, opts = {}) {
   const res = await fetch(`${API}${url}`, {
@@ -67,7 +109,6 @@ async function registerCommands() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(COMMANDS),
   });
-  if (!res.ok) throw new Error('register commands failed: ' + res.status);
   const list = await res.json();
   console.log(`[boot] registered ${list.length} command(s): ${COMMANDS.map((c) => '/' + c.name).join(' ')}`);
 }
@@ -112,16 +153,7 @@ async function reply(inter, embed) {
   }).catch(async () => edit(inter, 'Could not respond.', 0xff5577).catch(() => {}));
 }
 
-function helpEmbed() {
-  return {
-    color: 0x14b8a6,
-    title: 'Convert2GIF commands',
-    description: COMMANDS.map((c) => `**/${c.name}** — ${c.description}`).join('\n'),
-    footer: { text: `Self-hosted · v${APP_VERSION} · Hosted by ${HOSTED_BY}` },
-  };
-}
-
-async function runHelp(inter) { await reply(inter, helpEmbed()); }
+function embedColor() { return 0x14b8a6; }
 
 async function runGif(inter) {
   await api(`/interactions/${inter.id}/${inter.token}/callback`, {
@@ -131,7 +163,7 @@ async function runGif(inter) {
   }).catch(async () => edit(inter, 'Could not acknowledge the command.', 0xff5577).catch(() => {}));
 
   const img = await extractImage(inter);
-  if (!img) return edit(inter, 'No image found. Attach a **png/jpg/gif** or pass a `url:` — images only.', 0xff5577);
+  if (!img) return edit(inter, 'No image found. Attach a **png/jpg/gif** or pass a `url:` - images only.', 0xff5577);
 
   const t0 = Date.now();
   const gif = imageToGif(img.buffer, img.filename);
@@ -151,7 +183,102 @@ async function runGif(inter) {
   await api(`/webhooks/${config.clientId}/${inter.token}/messages/@original`, {
     method: 'PATCH',
     body: form,
-  }).catch(() => edit(inter, 'Conversion done but upload failed.', 0xff5577));
+  }).then(() => bumpStats('conversions'))
+    .catch(() => edit(inter, 'Conversion done but upload failed.', 0xff5577));
+}
+
+async function runHelp(inter) {
+  await reply(inter, {
+    color: embedColor(),
+    title: 'Convert2GIF commands',
+    description: COMMANDS.map((c) => `**/${c.name}** — ${c.description}`).join('\n'),
+    footer: { text: `Self-hosted · v${APP_VERSION} · Hosted by ${HOSTED_BY}` },
+  });
+}
+
+async function runInfo(inter) {
+  await reply(inter, {
+    color: embedColor(),
+    title: 'Convert2GIF',
+    description: 'Open-source Discord bot that turns images into real static GIF files.',
+    fields: [
+      { name: 'Version', value: APP_VERSION, inline: true },
+      { name: 'Presence', value: currentPresence, inline: true },
+      { name: 'Uptime', value: uptimeString(), inline: true },
+      { name: 'Hosted by', value: HOSTED_BY, inline: true },
+    ],
+    footer: { text: `Hosted by ${HOSTED_BY}` },
+  });
+}
+
+async function runUptime(inter) {
+  await reply(inter, {
+    color: embedColor(),
+    title: 'Uptime',
+    description: `Online for **${uptimeString()}** since <t:${Math.floor(bootedAt / 1000)}:R>.`,
+    footer: { text: `Hosted by ${HOSTED_BY}` },
+  });
+}
+
+async function runStats(inter) {
+  const s = loadStats();
+  await reply(inter, {
+    color: embedColor(),
+    title: 'Stats',
+    fields: [
+      { name: 'GIF conversions', value: String(s.conversions || 0), inline: true },
+      { name: 'Boots', value: String(s.boots || 0), inline: true },
+      { name: 'Servers', value: String(guildCount || s.servers || 0), inline: true },
+      { name: 'Uptime', value: uptimeString(), inline: true },
+      { name: 'Version', value: APP_VERSION, inline: true },
+    ],
+    footer: { text: `Hosted by ${HOSTED_BY}` },
+  });
+}
+
+async function deny(inter) {
+  await reply(inter, {
+    color: 0xff5577,
+    title: 'Permission denied',
+    description: 'This command is for the bot owner or server Admins only.',
+  });
+}
+
+async function runPresence(inter) {
+  if (!isManager(inter)) return deny(inter);
+  const o = (inter.data.options || []).find((x) => x.name === 'status');
+  const status = o && PRESENCE_CHOICES.some((c) => c.value === o.value) ? o.value : 'online';
+  writeControl({ presence: status });
+  currentPresence = status;
+  sendPresence(status);
+  await reply(inter, {
+    color: embedColor(),
+    title: 'Presence',
+    description: `Bot status set to **${status}**.`,
+    footer: { text: `Hosted by ${HOSTED_BY}` },
+  });
+}
+
+async function runRestart(inter) {
+  if (!isManager(inter)) return deny(inter);
+  writeControl({ request: { restart: true, update: false } });
+  await reply(inter, {
+    color: embedColor(),
+    title: 'Restart',
+    description: 'Restarting the bot and repairing deps now. Back in a few seconds.',
+    footer: { text: `Hosted by ${HOSTED_BY}` },
+  });
+}
+
+async function runUpdate(inter) {
+  if (!isManager(inter)) return deny(inter);
+  writeControl({ request: { restart: false, update: true } });
+  await reply(inter, {
+    color: embedColor(),
+    title: 'Update',
+    description: 'Update requested. The bootstrapper will download the latest release. Bot goes offline shortly.',
+    footer: { text: `Hosted by ${HOSTED_BY}` },
+  });
 }
 
 async function handleInteraction(inter) {
@@ -164,6 +291,12 @@ async function handleInteraction(inter) {
   try {
     if (name === 'gif') await runGif(inter);
     else if (name === 'help') await runHelp(inter);
+    else if (name === 'info') await runInfo(inter);
+    else if (name === 'uptime') await runUptime(inter);
+    else if (name === 'stats') await runStats(inter);
+    else if (name === 'presence') await runPresence(inter);
+    else if (name === 'restart') await runRestart(inter);
+    else if (name === 'update') await runUpdate(inter);
   } catch (e) {
     console.log(`[interaction] ${name} failed: ${e.message}`);
     edit(inter, `Command **/${name}** ran into a problem. Check the logs.`, 0xff5577).catch(() => {});
@@ -175,21 +308,13 @@ let seq = null;
 let sessionId = null;
 let heartbeatTimer = null;
 let missed = 0;
-let currentPresence = 'online';
 let presenceTimer = null;
 
 function readControl() {
   try {
     if (!fs.existsSync(CONTROL_PATH)) return null;
     return JSON.parse(fs.readFileSync(CONTROL_PATH, 'utf8'));
-  } catch {
-    return null;
-  }
-}
-
-function readPresence() {
-  const c = readControl();
-  return c && typeof c.presence === 'string' ? c.presence : null;
+  } catch { return null; }
 }
 
 function sendPresence(status) {
@@ -200,35 +325,32 @@ function sendPresence(status) {
   }));
 }
 
-function watchPresence() {
+function watchControl() {
   clearInterval(presenceTimer);
   presenceTimer = setInterval(() => {
     const c = readControl();
-    if (c && c.stop) {
-      log('stop requested via control.json');
+    if (!c) return;
+    if (c.stop) {
+      console.log('[control] stop requested - exiting');
       clearInterval(presenceTimer);
       process.exit(0);
     }
-    const next = c && c.presence;
-    if (next && next !== currentPresence && ['online', 'idle', 'dnd', 'invisible'].includes(next)) {
-      currentPresence = next;
+    if (c.presence && c.presence !== currentPresence && ['online', 'idle', 'dnd', 'invisible'].includes(c.presence)) {
+      currentPresence = c.presence;
       sendPresence(currentPresence);
-      console.log(`[boot] presence -> ${currentPresence}`);
+      console.log(`[control] presence -> ${currentPresence}`);
     }
-  }, 4000);
+  }, 3000);
 }
-
-const log = (...a) => console.log(`[${new Date().toISOString()}]`, ...a);
 
 async function connect() {
   const { url } = await api('/gateway').then((r) => r.json());
   ws = new WebSocket(url);
 
   ws.onopen = () => {
-    log('gateway connected');
     const d = {
       token: config.token,
-      intents: 1, // GUILDS — enough to receive INTERACTION_CREATE
+      intents: 1,
       properties: { os: 'windows', browser: 'convert2gif', device: 'convert2gif' },
     };
     if (sessionId) {
@@ -265,13 +387,24 @@ async function connect() {
       case 0:
         if (p.t === 'READY') {
           sessionId = p.d.session_id;
-          log(`ready as ${p.d.user.username} — v${APP_VERSION} — Hosted by ${HOSTED_BY}`);
-          currentPresence = readPresence() || 'online';
+          guildCount = (p.d.guilds || []).length;
+          const st = loadStats();
+          saveStats({ ...st, servers: guildCount });
+          currentPresence = (readControl() || {}).presence || currentPresence;
           sendPresence(currentPresence);
+          console.log(`ready as ${p.d.user.username} - v${APP_VERSION} - ${guildCount} server(s) - Hosted by ${HOSTED_BY}`);
         } else if (p.t === 'RESUMED') {
-          log('session resumed');
+          console.log('session resumed');
+        } else if (p.t === 'GUILD_CREATE') {
+          guildCount++;
+          const st = loadStats();
+          saveStats({ ...st, servers: guildCount });
+        } else if (p.t === 'GUILD_DELETE') {
+          guildCount = Math.max(0, guildCount - 1);
+          const st = loadStats();
+          saveStats({ ...st, servers: guildCount });
         } else if (p.t === 'INTERACTION_CREATE') {
-          handleInteraction(p.d).catch((err) => log('interaction', err.message));
+          handleInteraction(p.d).catch((err) => console.log('interaction', err.message));
         }
         break;
     }
@@ -279,7 +412,7 @@ async function connect() {
 
   ws.onclose = () => {
     if (ws) {
-      log('gateway closed — reconnect in 4s');
+      console.log('gateway closed - reconnect in 4s');
       setTimeout(connect, 4000);
     }
   };
@@ -287,9 +420,12 @@ async function connect() {
 }
 
 async function main() {
-  log(`Convert2GIF v${APP_VERSION} — Hosted by ${HOSTED_BY}`);
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const st = loadStats();
+  saveStats({ ...st, boots: (st.boots || 0) + 1, startedAt: Date.now() });
+  console.log(`Convert2GIF v${APP_VERSION} - Hosted by ${HOSTED_BY}`);
   await registerCommands();
-  watchPresence();
+  watchControl();
   await connect();
 }
 

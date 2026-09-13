@@ -16,6 +16,8 @@ jobs:
         run: node --check app/bot.js
       - name: Check media core syntax
         run: node --check app/media.js
+      - name: Check bootstrapper syntax
+        run: node --check bootstrap/launcher.js
       - name: Secret scan
         run: |
           if rg -il "MTU0NzY4|GlY1Fa|cfut_Q|BeaStly" --glob '!node_modules/**' . ; then
