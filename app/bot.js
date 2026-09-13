@@ -1,5 +1,5 @@
-// Convert2GIF — "/gif"-only self-hosted bot (plain Node.js >= 22).
-// Managed by the bootstrapper: reads config.json, watches control.json for
+﻿// Convert2GIF — "/gif"-only self-hosted bot (plain Node.js >= 22).
+// Reads config.json, watches control.json for
 // presence changes, registers/serves /gif. Hosted-by branding included.
 
 import fs from 'node:fs';
@@ -13,19 +13,19 @@ const HOSTED_BY = 'https://convert2gif.pages.dev/';
 const APP_VERSION = '1.3.0';
 
 // Config/control live OUTSIDE the app folder (in %APPDATA%\Convert2GIF) so they
-// survive app updates. The bootstrapper sets CONVERT2GIF_USERDATA.
+// The folder can be pointed at with CONVERT2GIF_USERDATA.
 const DATA_DIR = process.env.CONVERT2GIF_USERDATA || path.join(__dirname, 'data');
 const CONFIG_PATH = process.env.CONVERT2GIF_CONFIG || path.join(DATA_DIR, 'config.json');
 const CONTROL_PATH = process.env.CONVERT2GIF_CONTROL || path.join(DATA_DIR, 'control.json');
 
 function loadConfig() {
   if (!fs.existsSync(CONFIG_PATH)) {
-    console.error('config.json not found. Run the bootstrapper to configure the bot first.');
+    console.error('config.json not found. Create it first (see app/README.txt).');
     process.exit(1);
   }
   const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
   if (!cfg.token || !/^\d+$/.test(cfg.clientId || '')) {
-    console.error('config.json is missing bot token or client id. Re-run the bootstrapper.');
+    console.error('config.json is missing bot token or client id.');
     process.exit(1);
   }
   return cfg;
@@ -189,7 +189,7 @@ function infoEmbed(inter) {
       { name: 'Uptime', value: uptimeString(), inline: true },
       { name: 'Gateway ping', value: `${snowflakeAge(inter.id)}ms`, inline: true },
       { name: 'Commands', value: `${COMMANDS.length}`, inline: true },
-      { name: 'Hosting', value: 'Self-hosted (Windows desktop bootstrapper / Node)', inline: true },
+      { name: 'Hosting', value: 'Open source — self-hosted Node', inline: true },
     ],
     footer: { text: `Hosted by ${HOSTED_BY}` },
   };
@@ -279,7 +279,7 @@ async function handleInteraction(inter) {
     else if (name === 'presence') await runPresence(inter);
   } catch (e) {
     console.log(`[interaction] ${name} failed: ${e.message}`);
-    edit(inter, `Command **/${name}** ran into a problem. Check the bootstrapper log.`, 0xff5577).catch(() => {});
+    edit(inter, `Command **/${name}** ran into a problem. Check the logs.`, 0xff5577).catch(() => {});
   }
 }
 
