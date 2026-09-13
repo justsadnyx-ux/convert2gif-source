@@ -1,0 +1,15 @@
+services:
+  # Self-hosted /gif bot — the desktop bootstrapper equivalent, in a container.
+  convert2gif:
+    build: .
+    container_name: convert2gif-bot
+    restart: unless-stopped
+    environment:
+      CONVERT2GIF_USERDATA: /data
+    volumes:
+      - convert2gif-data:/data
+    ports:
+      - "39579:39579"
+
+volumes:
+  convert2gif-data:

@@ -27,6 +27,18 @@ macOS (`.dmg`) and mobile builds are coming soon.
 
 Your config is stored in `%APPDATA%\Convert2GIF\` — **you enter your token once, even across updates.**
 
+## Self-host from source (Node or Docker)
+
+No Windows machine? Run the bot standalone or in a container:
+
+- [docs/SETUP.md](docs/SETUP.md) — full step-by-step (Discord app, bootstrapper, config, updates, commands).
+- [docs/DOCKER.md](docs/DOCKER.md) — `docker compose up -d --build`; config mounted at `/data`, image has no secrets.
+- [docs/SELFHOST.md](docs/SELFHOST.md) — plain Node ≥ 22 + pm2/systemd, including auto-restart and update automation.
+
+## Commands
+
+The bot registers `/help`, `/info`, `/uptime`, and `/gif` (convert an image URL or attachment to a real static GIF file).
+
 ## Features
 
 - **Real native desktop window** — no browser tab, no terminal. Double-click to run.

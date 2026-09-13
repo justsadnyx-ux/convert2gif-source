@@ -43,6 +43,25 @@ const GIF_COMMAND = {
   ],
 };
 
+const COMMANDS = [
+  GIF_COMMAND,
+  { name: 'help', description: 'See every command and how Convert2GIF works', options: [] },
+  { name: 'info', description: 'Bot status: version, uptime, ping, hosting', options: [] },
+  { name: 'uptime', description: 'How long this bot has been running', options: [] },
+];
+const bootedAt = Date.now();
+
+function uptimeString() {
+  const secs = Math.floor((Date.now() - bootedAt) / 1000);
+  const d = Math.floor(secs / 86400), h = Math.floor((secs % 86400) / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  return `${d}d ${h}h ${m}m ${s}s`;
+}
+
+function snowflakeAge(id) {
+  const ts = Number(id) > 0 ? (Number(id) >> 22) + 1420070400000 : 0;
+  return ts > 0 ? Math.max(0, Date.now() - ts) : 0;
+}
+
 async function api(url, opts = {}) {
   const res = await fetch(`${API}${url}`, {
     ...opts,
@@ -59,11 +78,11 @@ async function registerCommands() {
   const res = await api(`/applications/${config.clientId}/commands`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify([GIF_COMMAND]),
+    body: JSON.stringify(COMMANDS),
   });
   if (!res.ok) throw new Error('register commands failed: ' + res.status);
   const list = await res.json();
-  console.log(`[boot] registered ${list.length} command(s): /gif`);
+  console.log(`[boot] registered ${list.length} command(s): ${COMMANDS.map((c) => '/' + c.name).join(' ')}`);
 }
 
 async function extractImage(inter) {
@@ -98,6 +117,43 @@ async function edit(inter, content, color = 0x2dd4bf) {
     body: JSON.stringify({ embeds: [{ color, description: content }] }),
   }).catch(() => {});
 }
+
+async function reply(inter, embed) {
+  await api(`/interactions/${inter.id}/${inter.token}/callback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 4, data: { embeds: [embed] } }),
+  }).catch(async () => edit(inter, 'Could not respond.', 0xff5577).catch(() => {}));
+}
+
+function helpEmbed() {
+  return {
+    color: 0x14b8a6,
+    title: 'Convert2GIF commands',
+    description: COMMANDS.map((c) => `**/${c.name}** — ${c.description}`).join('\n'),
+    footer: { text: `Self-hosted · v${APP_VERSION} · Hosted by ${HOSTED_BY}` },
+  };
+}
+
+function infoEmbed(inter) {
+  return {
+    color: 0x14b8a6,
+    title: 'Convert2GIF',
+    description: 'Open-source image → real static GIF bot, self-hosted by you on your own machine.',
+    fields: [
+      { name: 'Version', value: APP_VERSION, inline: true },
+      { name: 'Uptime', value: uptimeString(), inline: true },
+      { name: 'Gateway ping', value: `${snowflakeAge(inter.id)}ms`, inline: true },
+      { name: 'Commands', value: `${COMMANDS.length}`, inline: true },
+      { name: 'Hosting', value: 'Self-hosted (Windows desktop bootstrapper / Node)', inline: true },
+    ],
+    footer: { text: `Hosted by ${HOSTED_BY}` },
+  };
+}
+
+async function runHelp(inter) { await reply(inter, helpEmbed()); }
+async function runInfo(inter) { await reply(inter, infoEmbed(inter)); }
+async function runUptime(inter) { await reply(inter, { color: 0x14b8a6, title: 'Uptime', description: `Online for ${uptimeString()}`, footer: { text: `v${APP_VERSION} · Hosted by ${HOSTED_BY}` } }); }
 
 async function runGif(inter) {
   await api(`/interactions/${inter.id}/${inter.token}/callback`, {
@@ -135,7 +191,17 @@ async function handleInteraction(inter) {
     await api(`/interactions/${inter.id}/${inter.token}/callback`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 1 }) }).catch(() => {});
     return;
   }
-  if (inter.type === 2 && inter.data && inter.data.name === 'gif') await runGif(inter);
+  if (inter.type !== 2 || !inter.data) return;
+  const name = inter.data.name;
+  try {
+    if (name === 'gif') await runGif(inter);
+    else if (name === 'help') await runHelp(inter);
+    else if (name === 'info') await runInfo(inter);
+    else if (name === 'uptime') await runUptime(inter);
+  } catch (e) {
+    console.log(`[interaction] ${name} failed: ${e.message}`);
+    edit(inter, `Command **/${name}** ran into a problem. Check the bootstrapper log.`, 0xff5577).catch(() => {});
+  }
 }
 
 let ws = null;
