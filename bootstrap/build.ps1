@@ -9,7 +9,14 @@ if (-not (Test-Path $bun)) { throw 'bun not found at ' + $bun }
 New-Item -ItemType Directory -Path $dist -Force | Out-Null
 
 Write-Host '==> Compiling terminal bootstrapper exe (bun)...'
-& $bun build --compile --minify --outfile (Join-Path $dist 'Convert2GIF.exe') (Join-Path $root 'bootstrap\launcher.js')
+& $bun build --compile --minify `
+  --outfile (Join-Path $dist 'Convert2GIF.exe') `
+  --windows-publisher 'Convert2GIF' `
+  --windows-title 'Convert2GIF' `
+  --windows-version "$Version.0" `
+  --windows-description 'Convert2GIF - portable terminal bootstrapper' `
+  --windows-copyright 'Convert2GIF' `
+  (Join-Path $root 'bootstrap\launcher.js')
 if (-not (Test-Path (Join-Path $dist 'Convert2GIF.exe'))) { throw 'exe build failed' }
 
 Write-Host '==> Zipping app package (no node_modules)...'

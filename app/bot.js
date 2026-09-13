@@ -191,7 +191,7 @@ async function runHelp(inter) {
   await reply(inter, {
     color: embedColor(),
     title: 'Convert2GIF commands',
-    description: COMMANDS.map((c) => `**/${c.name}** — ${c.description}`).join('\n'),
+    description: 'Ayo, here\'s everything I can do:\n\n' + COMMANDS.map((c) => `**/${c.name}** — ${c.description}`).join('\n'),
     footer: { text: `Self-hosted · v${APP_VERSION} · Hosted by ${HOSTED_BY}` },
   });
 }
@@ -200,7 +200,7 @@ async function runInfo(inter) {
   await reply(inter, {
     color: embedColor(),
     title: 'Convert2GIF',
-    description: 'Open-source Discord bot that turns images into real static GIF files.',
+    description: 'Real talk: open-source Discord bot that turns images into real static GIF files. No cap.',
     fields: [
       { name: 'Version', value: APP_VERSION, inline: true },
       { name: 'Presence', value: currentPresence, inline: true },
@@ -215,7 +215,7 @@ async function runUptime(inter) {
   await reply(inter, {
     color: embedColor(),
     title: 'Uptime',
-    description: `Online for **${uptimeString()}** since <t:${Math.floor(bootedAt / 1000)}:R>.`,
+    description: `We been up **${uptimeString()}** since <t:${Math.floor(bootedAt / 1000)}:R>.`,
     footer: { text: `Hosted by ${HOSTED_BY}` },
   });
 }
@@ -225,6 +225,7 @@ async function runStats(inter) {
   await reply(inter, {
     color: embedColor(),
     title: 'Stats',
+    description: 'The numbers, real quick:',
     fields: [
       { name: 'GIF conversions', value: String(s.conversions || 0), inline: true },
       { name: 'Boots', value: String(s.boots || 0), inline: true },
@@ -240,7 +241,7 @@ async function deny(inter) {
   await reply(inter, {
     color: 0xff5577,
     title: 'Permission denied',
-    description: 'This command is for the bot owner or server Admins only.',
+    description: 'Nah - that one is for the owner or the admins only.',
   });
 }
 
@@ -254,7 +255,7 @@ async function runPresence(inter) {
   await reply(inter, {
     color: embedColor(),
     title: 'Presence',
-    description: `Bot status set to **${status}**.`,
+    description: `Bet. Bot status set to **${status}**.`,
     footer: { text: `Hosted by ${HOSTED_BY}` },
   });
 }
@@ -265,7 +266,7 @@ async function runRestart(inter) {
   await reply(inter, {
     color: embedColor(),
     title: 'Restart',
-    description: 'Restarting the bot and repairing deps now. Back in a few seconds.',
+    description: 'Aight, restartin\' now. Deps get fixed too. Back in a few seconds.',
     footer: { text: `Hosted by ${HOSTED_BY}` },
   });
 }
@@ -276,7 +277,7 @@ async function runUpdate(inter) {
   await reply(inter, {
     color: embedColor(),
     title: 'Update',
-    description: 'Update requested. The bootstrapper will download the latest release. Bot goes offline shortly.',
+    description: 'Say less - update on the way. The bootstrapper pulls the latest release while the bot goes offline for a sec.',
     footer: { text: `Hosted by ${HOSTED_BY}` },
   });
 }
@@ -392,7 +393,7 @@ async function connect() {
           saveStats({ ...st, servers: guildCount });
           currentPresence = (readControl() || {}).presence || currentPresence;
           sendPresence(currentPresence);
-          console.log(`ready as ${p.d.user.username} - v${APP_VERSION} - ${guildCount} server(s) - Hosted by ${HOSTED_BY}`);
+          console.log(`ready as ${p.d.user.username} - v${APP_VERSION} - ${guildCount} server(s) - we in the building`);
         } else if (p.t === 'RESUMED') {
           console.log('session resumed');
         } else if (p.t === 'GUILD_CREATE') {
@@ -423,7 +424,7 @@ async function main() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const st = loadStats();
   saveStats({ ...st, boots: (st.boots || 0) + 1, startedAt: Date.now() });
-  console.log(`Convert2GIF v${APP_VERSION} - Hosted by ${HOSTED_BY}`);
+  console.log(`Convert2GIF v${APP_VERSION} - we up. Hosted by ${HOSTED_BY}`);
   await registerCommands();
   watchControl();
   await connect();

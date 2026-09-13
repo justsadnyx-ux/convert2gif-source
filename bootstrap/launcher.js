@@ -121,15 +121,15 @@ function nodeVersion(exe) {
 function ensureNode() {
   const exe = findNodeExe();
   if (exe) return { ok: true, exe };
-  logLine('Node.js 22+ not found. It can be installed with winget.');
+  logLine('No Node.js 22+ around. You need it to run this - get it via winget.');
   if (process.stdin.isTTY) {
-    const y = askLine('Install Node.js LTS via winget now? [Y/n] ').toLowerCase();
+    const y = askLine('Want me to install Node.js LTS with winget? [Y/n] ').toLowerCase();
     if (y === '' || y === 'y' || y === 'yes') {
-      logLine('Installing Node.js LTS (winget - this can take a while)...');
+      logLine('Installing Node.js LTS via winget - give it a minute...');
       const r = run('winget', ['install', '--id', 'OpenJS.NodeJS.LTS', '--silent', '--accept-package-agreements', '--accept-source-agreements', '--disable-interactivity'], { timeout: 900000 });
       const exe2 = findNodeExe();
       if (exe2) { logLine('Node installed: ' + exe2); return { ok: true, exe: exe2 }; }
-      logLine('winget failed (code ' + r.status + '). Install Node LTS from https://nodejs.org');
+      logLine('winget came up short (code ' + r.status + '). Grab Node LTS from https://nodejs.org');
     }
   }
   return { ok: false, exe: null };
@@ -226,14 +226,14 @@ async function provisionApp() {
   const health = { bot: botFileOk(APPS_DIR), deps: moduleOk(APPS_DIR) };
   if (health.bot && health.deps) { saveState({ ...loadState(), appDir: APPS_DIR }); return { ok: true, skipped: true }; }
   if (!health.bot) {
-    logLine('app/ is missing bot.js - the app folder must sit next to the exe.');
+    logLine('Yo, app/ is missing bot.js - the app folder has to sit next to the exe.');
     return { ok: false };
   }
-  logLine('Installing bot dependencies (npm install)...');
+  logLine('Gettin the bot deps ready (npm install)...');
   const ok = await npmInstall(APPS_DIR);
-  if (!ok || !moduleOk(APPS_DIR)) { logLine('Dependencies did not install cleanly - check network.'); return { ok: false }; }
+  if (!ok || !moduleOk(APPS_DIR)) { logLine('Deps did not install clean - check your network.'); return { ok: false }; }
   saveState({ ...loadState(), appDir: APPS_DIR });
-  logLine('App ready. Config/data lives in: ' + USERDATA);
+  logLine('App ready. Config and data live in: ' + USERDATA);
   return { ok: true, skipped: false };
 }
 
@@ -251,21 +251,46 @@ function askLine(q) {
   return new Promise((resolve) => { a.question(q, (ans) => { a.close(); resolve(ans); }); });
 }
 
-async function promptConfig() {
-  if (getConfig().token) return true;
-  if (!process.stdin.isTTY) { logLine('No config yet - add your token to ' + CONFIG_PATH + ' and relaunch.'); return false; }
-  logLine('First run - Discord bot setup.');
-  logLine('Create the app + bot at https://discord.com/developers/applications');
-  const token = (await askLine('Bot token: ')).trim();
-  if (!token) return false;
-  const clientId = (await askLine('Application ID: ')).trim();
-  logLine('Validating token against Discord...');
+function validateAgainstDiscord(token) {
   const exe = findNodeExe();
-  const v = run(exe || 'node', ['-e', `fetch('https://discord.com/api/v10/users/@me',{headers:{Authorization:'Bot ${token}'}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(2))`], { timeout: 30000 });
-  if (v.status !== 0) logLine('Warning: token check failed (network or invalid token). Saving anyway.');
-  else logLine('Token looks good.');
-  saveConfig({ token, clientId });
-  logLine('Saved to ' + CONFIG_PATH);
+  return run(exe || 'node', ['-e', `fetch('https://discord.com/api/v10/users/@me',{headers:{Authorization:'Bot ${token}'}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(2))`], { timeout: 30000 }).status === 0;
+}
+
+async function promptConfig(cliArgs) {
+  if (getConfig().token) return true;
+
+  if (cliArgs && cliArgs.token) {
+    const clientId = String(cliArgs.clientId || '').trim();
+    if (!/^\d+$/.test(clientId)) { logLine('Client id given via CLI is not numeric - fix it and rerun.'); return false; }
+    const ownerId = String(cliArgs.ownerId || '').trim();
+    if (ownerId && !/^\d+$/.test(ownerId)) { logLine('Owner id given via CLI is not numeric - ignoring it.'); }
+    logLine('Validating token against Discord...');
+    if (!validateAgainstDiscord(cliArgs.token)) logLine('Warning: token check failed (network or invalid token). Saving anyway.');
+    saveConfig({ token: String(cliArgs.token).trim(), clientId, ...(ownerId ? { ownerIds: ownerId } : {}) });
+    logLine('Config saved to ' + CONFIG_PATH + (ownerId ? ' (owner: ' + ownerId + ')' : ''));
+    return true;
+  }
+
+  if (!process.stdin.isTTY) { logLine('No config yet - drop your token into ' + CONFIG_PATH + ' and relaunch.'); return false; }
+
+  logLine('');
+  logLine('First run, we set this thing up. Real quick:');
+  logLine('Make the app + bot at https://discord.com/developers/applications');
+  logLine('');
+  const token = (await askLine('1) Bot token (keep this private): ')).trim();
+  if (!token) { logLine('No token - aborting setup.'); return false; }
+  const clientId = (await askLine('2) Application ID (the numbers): ')).trim();
+  if (!/^\d+$/.test(clientId)) {
+    logLine('That Application ID should be digits only. Copy it from the General Information tab.');
+    return false;
+  }
+  const ownerId = (await askLine('3) Your user ID (admin powers, optional - press Enter to skip): ')).trim();
+  if (ownerId && !/^\d+$/.test(ownerId)) { logLine('User ID should be digits only - keeping config clean, skipping it.'); }
+  logLine('Validating token against Discord...');
+  if (!validateAgainstDiscord(token)) logLine('Warning: token check failed (network or invalid token). Saving anyway.');
+  else logLine('Token checks out.');
+  saveConfig({ token, clientId, ...(ownerId && /^\d+$/.test(ownerId) ? { ownerIds: ownerId } : {}) });
+  logLine('Saved to ' + CONFIG_PATH + ' - it stays put across updates.');
   return true;
 }
 
@@ -281,7 +306,7 @@ function startBot() {
 
   manualStop = false;
   writeControlPatch({ stop: false, request: { restart: false, update: false }, presence: getControl().presence || 'online' });
-  logLine('Starting bot...');
+  logLine('Firin up the bot...');
   botProc = spawn(exe, [path.join(APPS_DIR, 'bot.js')], { cwd: APPS_DIR, windowsHide: true, env: { ...process.env, CONVERT2GIF_USERDATA: USERDATA } });
   botState = 'starting';
   const startedAt = Date.now();
@@ -304,15 +329,15 @@ function onBotExit(code, startedAt) {
   const quickExit = Date.now() - startedAt < 12000;
   const moduleFail = /ERR_MODULE_NOT_FOUND|MODULE_NOT_FOUND|Cannot find package|Cannot find module/i.test(readLastLines(80));
   const fatal = /HTTP 401|Invalid token|401 Unauthorized/i.test(readLastLines(40));
-  if (fatal) { logLine('Bot login rejected (bad token). Fix ' + CONFIG_PATH + ' and press [R].'); return; }
+  if (fatal) { logLine('That token got no love - rejected by Discord. Fix ' + CONFIG_PATH + ' and press [R].'); return; }
   if (manualStop) { logLine('Bot stopped.'); return; }
   if (getControl().stop) { logLine('Bot stopped (control.json stop).'); return; }
   if (quickExit || moduleFail) {
     healCount++;
     if (healCount <= 2) {
-      logLine('Bot crashed at startup - auto-repairing deps (' + healCount + '/2)...');
-      healApp().then(() => { logLine('Deps repaired. Restarting...'); startBot(); })
-        .catch((e) => { logLine('Repair failed: ' + e.message); });
+      logLine('Bot stumbled out the gate - fixin the deps (' + healCount + '/2)...');
+      healApp().then(() => { logLine('Deps fixed. Back on it...'); startBot(); })
+        .catch((e) => { logLine('Repair came up short: ' + e.message); });
       return;
     }
     healCount = 0;
@@ -320,8 +345,8 @@ function onBotExit(code, startedAt) {
   const now = Date.now();
   crashSessions = (now - lastCrash < 60000) ? crashSessions + 1 : 1;
   lastCrash = now;
-  if (crashSessions > 5) { logLine('Bot keeps dying. Press [X] to start it manually.'); return; }
-  logLine('Bot exited (code ' + code + '). Restarting in 2s...');
+  if (crashSessions > 5) { logLine('Bot keeps floppin. Press [X] to bring it back when you are ready.'); return; }
+  logLine('Bot went down (code ' + code + '). Restarting in 2s...');
   setTimeout(() => startBot(), 2000);
 }
 
@@ -329,7 +354,7 @@ function stopBot(killTimeout) {
   if (!botProc) { botState = 'stopped'; return; }
   manualStop = true;
   botState = 'stopping';
-  logLine('Stopping bot...');
+  logLine('Coolin it down - stopping bot...');
   writeControlPatch({ stop: true });
   const pid = botProc.pid;
   const deadline = Date.now() + (killTimeout || 6000);
@@ -361,8 +386,8 @@ function presencesCycle() {
 async function checkUpdates() {
   const rel = await latestRelease();
   if (!rel) { setMenu('update check failed (network)'); return null; }
-  if (isNewer(rel.tag, APP_VERSION)) { setMenu(rel.tag + ' available!'); return rel; }
-  setMenu('you are up to date (' + rel.tag + ')');
+  if (isNewer(rel.tag, APP_VERSION)) { setMenu(rel.tag + ' is out!'); return rel; }
+  setMenu('you on the newest already (' + rel.tag + ')');
   return null;
 }
 
@@ -373,11 +398,11 @@ async function applyUpdate(fromBot) {
     const rel = await latestRelease();
     if (!rel) throw new Error('network');
     if (!isNewer(rel.tag, APP_VERSION)) { setMenu('already up to date'); logLine('No update needed (latest ' + rel.tag + ').'); return; }
-    logLine('Updating to ' + rel.tag + '...');
+    logLine('Grabbin the new goodz - updating to ' + rel.tag + '...');
     if (fromBot) stopBot(6000);
 
     if (rel.appZip) {
-      logLine('Downloading app package...');
+      logLine('Downloading the app package...');
       const zip = path.join(UPDATES_DIR, rel.appZip.name);
       await download(rel.appZip.url, zip, (p) => logLine('  ' + p + '%'));
       const tmp = APPS_DIR + '.tmp';
@@ -385,19 +410,19 @@ async function applyUpdate(fromBot) {
       mkdirSync(tmp, { recursive: true });
       if (!extractZip(zip, tmp)) throw new Error('app zip extract failed');
       if (!botFileOk(tmp)) throw new Error('app zip missing bot.js - update cancelled');
-      logLine('Swapping app files...');
+      logLine('Swapping the app files...');
       const bak = APPS_DIR + '.bak';
       rmSync(bak, { recursive: true, force: true });
       if (existsSync(APPS_DIR)) { try { renameSync(APPS_DIR, bak); } catch { copyDir(APPS_DIR, bak); } }
       try { renameSync(tmp, APPS_DIR); } catch { copyDir(tmp, APPS_DIR); rmSync(tmp, { recursive: true, force: true }); }
-      logLine('Installing dependencies for new app...');
+      logLine('Installing deps for the new app...');
       await npmInstall(APPS_DIR);
       rmSync(bak, { recursive: true, force: true });
     }
 
     if (rel.exe && rel.exe.url && !runningFromSource) {
       try {
-        logLine('Downloading new bootstrapper...');
+        logLine('Downloading the new bootstrapper...');
         rmSync(NEXT_EXE + '.new', { force: true });
         await download(rel.exe.url, NEXT_EXE + '.new', (p) => logLine('  ' + p + '%'));
         const hdr = readFileSync(NEXT_EXE + '.new', 'latin1');
@@ -405,17 +430,17 @@ async function applyUpdate(fromBot) {
         if (rel.exe.digest && sha256File(NEXT_EXE + '.new') !== rel.exe.digest) throw new Error('checksum mismatch');
         renameSync(NEXT_EXE + '.new', NEXT_EXE);
         setMenu('new exe downloaded - swapping');
-        logLine('Launching new bootstrapper...');
+        logLine('Launchin the new bootstrapper...');
         spawn(NEXT_EXE, ['--post-update=' + process.execPath], { detached: true, stdio: 'ignore', windowsHide: true });
-        logLine('Old version shutting down.');
+        logLine('Old version stepping down.');
         setTimeout(() => process.exit(0), 1200);
         return;
       } catch (e) {
-        logLine('Exe update failed, app still updated: ' + e.message);
+        logLine('Exe update came up short, app still updated: ' + e.message);
       }
     }
 
-    logLine('Update complete (' + rel.tag + ').');
+    logLine('Update done (' + rel.tag + ').');
     startBot();
   } catch (e) {
     logLine('Update failed: ' + e.message);
@@ -425,18 +450,18 @@ async function applyUpdate(fromBot) {
 }
 
 async function cleanupAfterUpdate(oldExe) {
-  logLine('Cleaning up old bootstrapper files...');
+  logLine('Tidyin up the old bootstrapper files...');
   for (let i = 0; i < 15; i++) {
     try { rmSync(oldExe, { force: true }); break; } catch { await sleep(400); }
   }
   const dest = path.join(EXE_DIR, EXE_ASSET);
   try {
     copyFileSync(NEXT_EXE, dest);
-    logLine('Placed new ' + EXE_ASSET + ' in ' + EXE_DIR);
+    logLine('Placed the new ' + EXE_ASSET + ' in ' + EXE_DIR);
     spawn(dest, [], { detached: true, stdio: 'ignore', windowsHide: true });
     setTimeout(() => process.exit(0), 800);
   } catch (e) {
-    logLine('Could not replace exe in place (' + e.message + '). Running from updates dir.');
+    logLine('Could not replace the exe in place (' + e.message + '). Running from updates dir.');
   }
 }
 
@@ -444,7 +469,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 function drawHeader() {
   console.log('');
-  console.log('  Convert2GIF Bootstrapper v' + APP_VERSION + '  |  ' + HOSTED_BY);
+  console.log('  Convert2GIF Bootstrapper v' + APP_VERSION + '  -  the plug  |  ' + HOSTED_BY);
   console.log('  ------------------------------------------------------------------');
 }
 
@@ -457,7 +482,7 @@ function showMenu() {
 }
 
 function setupKeys() {
-  if (!process.stdin.isTTY) { logLine('Non-interactive terminal - use control.json (stop, presence, request.restart/update).'); return; }
+  if (!process.stdin.isTTY) { logLine('No live console here - drive it with data\\control.json (stop, presence, request.restart / request.update).'); return; }
   rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   process.stdin.setRawMode && process.stdin.setRawMode(true);
   process.stdin.resume();
@@ -524,6 +549,12 @@ async function boot() {
   for (const a of process.argv.slice(2)) {
     const m = String(a).match(/^--post-update=(.+)$/);
     if (m) args.postUpdate = m[1].trim();
+    const k = String(a).match(/^--token=(.+)$/);
+    if (k) args.token = k[1].trim();
+    const ci = String(a).match(/^--client-id=(.+)$/);
+    if (ci) args.clientId = ci[1].trim();
+    const oi = String(a).match(/^--owner-id=(.+)$/);
+    if (oi) args.ownerId = oi[1].trim();
   }
 
   ensureDirs();
@@ -534,15 +565,15 @@ async function boot() {
   logLine('Data: ' + USERDATA);
 
   const node = ensureNode();
-  if (!node.ok) { logLine('No Node.js 22+ available. Exiting.'); setTimeout(() => process.exit(1), 800); return; }
+  if (!node.ok) { logLine('Need Node.js 22+ to run this. Exiting.'); setTimeout(() => process.exit(1), 800); return; }
   logLine('Node: ' + node.exe + ' (v' + nodeVersion(node.exe) + ')');
 
   if (args.postUpdate) postUpdateOld = args.postUpdate;
 
-  const cfgOk = await promptConfig();
+  const cfgOk = await promptConfig(args);
   const prov = await provisionApp();
   if (cfgOk && prov.ok) startBot();
-  else logLine('First-run steps left: ' + [(cfgOk ? '' : 'config'), (prov.ok ? '' : 'deps')].filter(Boolean).join(' + ') + ' - see messages above.');
+  else logLine('Still on the to-do list: ' + [(cfgOk ? '' : 'config'), (prov.ok ? '' : 'deps')].filter(Boolean).join(' + ') + ' - check the messages above.');
 
   startControlWatcher();
   setupKeys();
