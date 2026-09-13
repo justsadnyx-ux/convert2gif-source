@@ -1,4 +1,4 @@
-﻿// Convert2GIF v1.2.0 - open-source Discord bot (plain Node.js >= 22).
+﻿// Convert2GIF v1.0.0 - open-source Discord bot (plain Node.js >= 22).
 // Commands: /gif /help /info /uptime /stats /presence /restart /update.
 // config/control/stats live in CONVERT2GIF_USERDATA (default ./data).
 
@@ -9,7 +9,7 @@ import { imageToGif, imgInfo, downloadAttachment, isSupportedImage } from './med
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HOSTED_BY = 'https://convert2gif.pages.dev/';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.0.0';
 
 const DATA_DIR = process.env.CONVERT2GIF_USERDATA || path.join(process.cwd(), 'data');
 const CONFIG_PATH = process.env.CONVERT2GIF_CONFIG || path.join(DATA_DIR, 'config.json');

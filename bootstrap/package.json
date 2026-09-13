@@ -1,6 +1,6 @@
 {
   "name": "convert2gif-bootstrap",
-  "version": "1.2.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Convert2GIF portable terminal bootstrapper - hosts and self-updates the bot",

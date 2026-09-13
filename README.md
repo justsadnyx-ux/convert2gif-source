@@ -13,12 +13,12 @@ An **open-source** Discord bot that turns PNG/JPG/GIF images into **real static 
 
 ## Get it
 
-Grab **Convert2GIF-v1.2.0-portable.zip** from the
+Grab **Convert2GIF.exe** from the
 [Releases](https://github.com/justsadnyx-ux/convert2gif-source/releases) page —
-it's the bot + a small console bootstrapper in one portable folder. Double-click
-`Convert2GIF.exe`; it installs dependencies, asks for your Discord token, hosts
-the bot in the terminal, restarts it if it crashes, and can update itself from
-GitHub.
+it is the entire thing in one file: a small console bootstrapper with the bot
+built in. Double-click it; it asks for your Discord token + Application ID,
+installs dependencies, hosts the bot in the terminal, restarts it if it
+crashes, and can update itself from GitHub.
 
 Or run the bot from source (`app/`).
 

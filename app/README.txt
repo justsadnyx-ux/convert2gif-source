@@ -1,14 +1,14 @@
-Convert2GIF - open-source Discord bot (v1.2.0)
-===============================================
+Convert2GIF - open-source Discord bot (v1.0.0)
+=============================================
 
 A Discord bot that converts PNG/JPG/GIF images into REAL static GIF files.
 Pure Node.js >= 22, no Discord library, no build step.
 
 Two ways to run
-  - Portable terminal app: grab Convert2GIF-v1.2.0-portable.zip from the
-    Releases page. Extract, double-click Convert2GIF.exe. It installs the
-    deps, asks for your token, hosts the bot, self-heals crashes and can
-    update itself from GitHub. Everything stays inside the folder (portable).
+  - Single-file app: grab Convert2GIF.exe from the Releases page. Double-click.
+    It has the bot built in, installs the deps, asks for your token +
+    Application ID, hosts the bot, self-heals crashes and can update itself
+    from GitHub. Everything stays inside the folder (portable).
   - From source:
       npm install
       npm start        (or: node bot.js)
@@ -41,8 +41,8 @@ Files
   media.js     pure image -> GIF conversion core
   package.json dependencies (gifenc, jpeg-js, omggif, upng-js)
 
-The ./bootstrap folder holds the portable terminal bootstrapper (launcher.js)
-that hosts this app - see bootstrap/README.txt. Build it with build.ps1.
+The ./bootstrap folder holds the single-file terminal bootstrapper
+(launcher.js) that hosts this app; build it with bootstrap/build.ps1.
 
 Branding: "Hosted by https://convert2gif.pages.dev/" is shown in the reply
 footer and bot activity. Keep it when forking.

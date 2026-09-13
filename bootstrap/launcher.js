@@ -1,7 +1,9 @@
-// Convert2GIF Bootstrapper v1.2.0 - portable terminal engine.
+// Convert2GIF Bootstrapper v1.0.0 - portable terminal engine.
 // Pure Node.js (>= 18, fetches + readline): finds/installs Node, provisions
 // the app folder, hosts bot.js, self-heals crashes, live-updates from GitHub
-// releases. Shipped as a single console .exe via bun --compile.
+// releases. Shipped as a single console .exe via bun --compile. The bot app
+// (bot.js + package.json) is embedded in the exe, so the whole thing is one
+// file with no sidecar zips.
 
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -10,8 +12,9 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import * as readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { EMBEDDED_APP } from './embedded-app.js';
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.0.0';
 const REPO = 'justsadnyx-ux/convert2gif-source';
 const HOSTED_BY = 'https://convert2gif.pages.dev/';
 const GITHUB_LATEST = `https://api.github.com/repos/${REPO}/releases/latest`;
@@ -222,11 +225,25 @@ function moduleOk(appDir) {
 
 function botFileOk(appDir) { return existsSync(path.join(appDir, 'bot.js')) && existsSync(path.join(appDir, 'package.json')); }
 
+function writeEmbeddedApp(appDir) {
+  let wrote = false;
+  for (const f of EMBEDDED_APP || []) {
+    try {
+      if (readFileSync(path.join(appDir, f.name), 'utf8') === f.content) continue;
+    } catch { /* missing or unreadable - write it */ }
+    mkdirSync(appDir, { recursive: true });
+    writeFileSync(path.join(appDir, f.name), f.content, 'utf8');
+    wrote = true;
+  }
+  return wrote;
+}
+
 async function provisionApp() {
-  const health = { bot: botFileOk(APPS_DIR), deps: moduleOk(APPS_DIR) };
+  writeEmbeddedApp(APPS_DIR);
+  let health = { bot: botFileOk(APPS_DIR), deps: moduleOk(APPS_DIR) };
   if (health.bot && health.deps) { saveState({ ...loadState(), appDir: APPS_DIR }); return { ok: true, skipped: true }; }
   if (!health.bot) {
-    logLine('Yo, app/ is missing bot.js - the app folder has to sit next to the exe.');
+    logLine('Yo, no app/ folder next to me - this build has no embedded app. Keep app/ (bot.js + package.json) beside the exe.');
     return { ok: false };
   }
   logLine('Gettin the bot deps ready (npm install)...');
@@ -253,7 +270,20 @@ function askLine(q) {
 
 function validateAgainstDiscord(token) {
   const exe = findNodeExe();
-  return run(exe || 'node', ['-e', `fetch('https://discord.com/api/v10/users/@me',{headers:{Authorization:'Bot ${token}'}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(2))`], { timeout: 30000 }).status === 0;
+  const r = run(exe || 'node', ['-e', `fetch('https://discord.com/api/v10/users/@me',{headers:{Authorization:'Bot ${token}'}}).then(r=>{if(r.ok){console.log('VALID');process.exit(0)}if(r.status===401||r.status===403){console.log('INVALID');process.exit(1)}console.log('UNKNOWN '+r.status);process.exit(3)}).catch(()=>{console.log('UNREACHABLE');process.exit(2)})`], { timeout: 30000 });
+  const out = (r.stdout || '').trim();
+  return {
+    code: r.status,
+    kind: out.indexOf('VALID') === 0 ? 'valid' : out.indexOf('INVALID') === 0 ? 'invalid' : out.indexOf('UNREACHABLE') === 0 ? 'unreachable' : r.status ? 'spawn-failed' : 'empty',
+  };
+}
+
+function tokenCheckMessage(res) {
+  if (!res || res.kind === 'valid') return null;
+  if (res.kind === 'invalid') return 'Discord rejected that token. Double-check it, real quick.';
+  if (res.kind === 'unreachable') return "Couldn't reach Discord to verify the token (offline?). Saving anyway - if login fails, check the token.";
+  if (res.kind === 'spawn-failed') return "Couldn't run the token check (no Node?). Saving anyway.";
+  return "Couldn't read the token check result. Saving anyway.";
 }
 
 async function promptConfig(cliArgs) {
@@ -265,7 +295,10 @@ async function promptConfig(cliArgs) {
     const ownerId = String(cliArgs.ownerId || '').trim();
     if (ownerId && !/^\d+$/.test(ownerId)) { logLine('Owner id given via CLI is not numeric - ignoring it.'); }
     logLine('Validating token against Discord...');
-    if (!validateAgainstDiscord(cliArgs.token)) logLine('Warning: token check failed (network or invalid token). Saving anyway.');
+    const res = validateAgainstDiscord(cliArgs.token);
+    if (res && res.kind === 'valid') logLine('Token checks out.');
+    else { const msg = tokenCheckMessage(res); if (msg) logLine(msg); }
+    if (res && res.kind === 'invalid') { logLine('Aborting setup - fix the token and rerun.'); return false; }
     saveConfig({ token: String(cliArgs.token).trim(), clientId, ...(ownerId ? { ownerIds: ownerId } : {}) });
     logLine('Config saved to ' + CONFIG_PATH + (ownerId ? ' (owner: ' + ownerId + ')' : ''));
     return true;
@@ -287,8 +320,11 @@ async function promptConfig(cliArgs) {
   const ownerId = (await askLine('3) Your user ID (admin powers, optional - press Enter to skip): ')).trim();
   if (ownerId && !/^\d+$/.test(ownerId)) { logLine('User ID should be digits only - keeping config clean, skipping it.'); }
   logLine('Validating token against Discord...');
-  if (!validateAgainstDiscord(token)) logLine('Warning: token check failed (network or invalid token). Saving anyway.');
-  else logLine('Token checks out.');
+  const res = validateAgainstDiscord(token);
+  const msg = tokenCheckMessage(res);
+  if (msg) logLine(msg);
+  if (res && res.kind === 'invalid') { logLine('Aborting setup - fix the token and rerun.'); return false; }
+  else if (!msg) logLine('Token checks out.');
   saveConfig({ token, clientId, ...(ownerId && /^\d+$/.test(ownerId) ? { ownerIds: ownerId } : {}) });
   logLine('Saved to ' + CONFIG_PATH + ' - it stays put across updates.');
   return true;
